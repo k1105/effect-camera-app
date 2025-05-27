@@ -73,9 +73,6 @@ export default function App() {
   /* ---------- 2) 描画ループ ---------- */
   useEffect(() => {
     if (!ready) return;
-    const cvs = canvasRef.current!;
-    const ctx = cvs.getContext("2d")!;
-    const vid = videoRef.current!;
 
     let raf = 0;
     const draw = () => {
