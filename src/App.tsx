@@ -122,59 +122,39 @@ export default function App() {
     // ズーム値を1.0から1.9の範囲に制限
     const clampedZoom = Math.max(1.0, Math.min(1.9, newZoom));
 
-    // アニメーション開始
-    const startZoom = displayZoom;
-    const endZoom = clampedZoom;
-    const duration = 300; // アニメーション時間（ミリ秒）
-    const startTime = performance.now();
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // イージング関数（easeInOutQuad）
-      const easeProgress =
-        progress < 0.5
-          ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-      const currentZoom = startZoom + (endZoom - startZoom) * easeProgress;
-      setDisplayZoom(currentZoom);
-
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        // アニメーション完了時に実際のズームを設定
-        setZoom(clampedZoom);
-        if (streamRef.current) {
-          const track = streamRef.current.getVideoTracks()[0];
-          try {
-            const capabilities = track.getCapabilities();
-            if (capabilities.zoom) {
-              const minZoom = capabilities.zoom.min || 1.0;
-              const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
-              const deviceClampedZoom = Math.max(
-                minZoom,
-                Math.min(maxZoom, clampedZoom)
-              );
-
-              track.applyConstraints({
-                advanced: [{zoom: deviceClampedZoom}],
-              });
-            }
-          } catch (error) {
-            console.error("ズームの設定に失敗しました:", error);
-            setZoom(zoom);
-            setDisplayZoom(zoom);
-          }
-        }
-      }
-    };
-
+    // 現在のアニメーションをキャンセル
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
     }
-    animationRef.current = requestAnimationFrame(animate);
+
+    // 即座に表示用のズーム値を更新
+    setDisplayZoom(clampedZoom);
+
+    // カメラのズームを設定
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      try {
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom) {
+          const minZoom = capabilities.zoom.min || 1.0;
+          const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
+          const deviceClampedZoom = Math.max(
+            minZoom,
+            Math.min(maxZoom, clampedZoom)
+          );
+
+          await track.applyConstraints({
+            advanced: [{zoom: deviceClampedZoom}],
+          });
+          setZoom(deviceClampedZoom);
+        }
+      } catch (error) {
+        console.error("ズームの設定に失敗しました:", error);
+        // エラー時は前の値に戻す
+        setDisplayZoom(zoom);
+      }
+    }
   };
 
   const takePhoto = async () => {
@@ -401,6 +381,7 @@ export default function App() {
       cancelAnimationFrame(raf);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
     };
   }, [ready, current, bitmaps, displayZoom, isFrontCamera]);
