@@ -21,6 +21,7 @@ export default function App() {
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [isZoomSupported, setIsZoomSupported] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -151,6 +152,7 @@ export default function App() {
     const canvas = canvasRef.current;
     const imageData = canvas.toDataURL("image/png");
     setPreviewImage(imageData);
+    setIsPreviewMode(true);
   };
 
   const downloadPhoto = () => {
@@ -162,41 +164,9 @@ export default function App() {
     link.click();
   };
 
-  const backToCamera = async () => {
-    try {
-      // 現在のストリームを停止
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-
-      // カメラを再初期化
-      const constraints = {
-        video: {
-          facingMode: isFrontCamera ? "user" : "environment",
-          width: isFrontCamera ? {ideal: 1280} : {ideal: 3840},
-          height: isFrontCamera ? {ideal: 720} : {ideal: 2160},
-          frameRate: {ideal: 30},
-          zoom: zoom,
-        },
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // 新しいストリームの準備ができるまで待機
-        await new Promise<void>((res) => {
-          videoRef.current!.onloadedmetadata = () => res();
-        });
-        await videoRef.current.play();
-      }
-
-      // プレビューをクリア
-      setPreviewImage(null);
-    } catch (error) {
-      console.error("カメラの再初期化に失敗しました:", error);
-    }
+  const backToCamera = () => {
+    setPreviewImage(null);
+    setIsPreviewMode(false);
   };
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
@@ -263,7 +233,7 @@ export default function App() {
 
   /* ---------- 2) 描画ループ ---------- */
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || isPreviewMode) return;
 
     let raf = 0;
     const draw = () => {
@@ -323,14 +293,14 @@ export default function App() {
     };
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [ready, current, bitmaps]);
+  }, [ready, current, bitmaps, isPreviewMode]);
 
   /* ---------- UI ---------- */
   return (
     <>
       <video ref={videoRef} style={{display: "none"}} playsInline muted />
 
-      {previewImage ? (
+      {isPreviewMode ? (
         <div
           style={{
             position: "fixed",
@@ -344,10 +314,11 @@ export default function App() {
             alignItems: "center",
             justifyContent: "center",
             gap: "20px",
+            zIndex: 2,
           }}
         >
           <img
-            src={previewImage}
+            src={previewImage!}
             style={{
               maxWidth: "100%",
               maxHeight: "80vh",
