@@ -12,14 +12,18 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const initedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const isCapturingRef = useRef(false);
 
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(0);
   const [ready, setReady] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [displayZoom, setDisplayZoom] = useState(1); // 表示用のズーム値
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [isZoomSupported, setIsZoomSupported] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -104,48 +108,149 @@ export default function App() {
   };
 
   const handleZoom = async (newZoom: number) => {
-    if (!isZoomSupported) {
-      console.log("ズーム機能はこのデバイスではサポートされていません");
+    if (!isZoomSupported || isFrontCamera) {
+      console.log(
+        "ズーム機能はこのデバイスではサポートされていないか、インカムでは利用できません"
+      );
       return;
     }
 
     // ズーム値を1.0から1.9の範囲に制限
     const clampedZoom = Math.max(1.0, Math.min(1.9, newZoom));
-    setZoom(clampedZoom);
 
-    if (streamRef.current) {
-      const track = streamRef.current.getVideoTracks()[0];
-      try {
-        const capabilities = track.getCapabilities();
-        if (capabilities.zoom) {
-          // デバイスがサポートするズーム範囲を確認
-          const minZoom = capabilities.zoom.min || 1.0;
-          const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
-          const deviceClampedZoom = Math.max(
-            minZoom,
-            Math.min(maxZoom, clampedZoom)
-          );
+    // アニメーション開始
+    const startZoom = displayZoom;
+    const endZoom = clampedZoom;
+    const duration = 300; // アニメーション時間（ミリ秒）
+    const startTime = performance.now();
 
-          await track.applyConstraints({
-            advanced: [{zoom: deviceClampedZoom}],
-          });
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // イージング関数（easeInOutQuad）
+      const easeProgress =
+        progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+      const currentZoom = startZoom + (endZoom - startZoom) * easeProgress;
+      setDisplayZoom(currentZoom);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        // アニメーション完了時に実際のズームを設定
+        setZoom(clampedZoom);
+        if (streamRef.current) {
+          const track = streamRef.current.getVideoTracks()[0];
+          try {
+            const capabilities = track.getCapabilities();
+            if (capabilities.zoom) {
+              const minZoom = capabilities.zoom.min || 1.0;
+              const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
+              const deviceClampedZoom = Math.max(
+                minZoom,
+                Math.min(maxZoom, clampedZoom)
+              );
+
+              track.applyConstraints({
+                advanced: [{zoom: deviceClampedZoom}],
+              });
+            }
+          } catch (error) {
+            console.error("ズームの設定に失敗しました:", error);
+            setZoom(zoom);
+            setDisplayZoom(zoom);
+          }
         }
-      } catch (error) {
-        console.error("ズームの設定に失敗しました:", error);
-        // ズーム設定に失敗した場合は、前の値に戻す
-        setZoom(zoom);
       }
+    };
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
     }
+    animationRef.current = requestAnimationFrame(animate);
   };
 
-  const takePhoto = () => {
-    if (!canvasRef.current) return;
+  const takePhoto = async () => {
+    if (isCapturingRef.current) return;
+    isCapturingRef.current = true;
+    setIsCapturing(true);
 
-    const canvas = canvasRef.current;
-    const link = document.createElement("a");
-    link.download = `photo-${new Date().toISOString()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    try {
+      const canvas = canvasRef.current!;
+      const ctx = canvas.getContext("2d")!;
+
+      // 撮影時のフラッシュエフェクト
+      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // WebP形式で画像を生成（高品質、低サイズ）
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+          },
+          "image/webp",
+          0.9
+        );
+      });
+
+      // メタデータを追加
+      const metadata = {
+        type: "image/webp",
+        lastModified: Date.now(),
+        name: `photo-${new Date().toISOString()}.webp`,
+      };
+
+      // ファイルとして保存
+      const file = new File([blob], metadata.name, {
+        type: metadata.type,
+        lastModified: metadata.lastModified,
+      });
+
+      // ダウンロードリンクを作成
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = metadata.name;
+      link.click();
+
+      // メモリリークを防ぐためにURLを解放
+      URL.revokeObjectURL(url);
+
+      // 撮影成功のフィードバック
+      const flash = document.createElement("div");
+      flash.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.1s ease-out;
+      `;
+      document.body.appendChild(flash);
+
+      // フラッシュアニメーション
+      requestAnimationFrame(() => {
+        flash.style.opacity = "0.3";
+        setTimeout(() => {
+          flash.style.opacity = "0";
+          setTimeout(() => {
+            document.body.removeChild(flash);
+          }, 100);
+        }, 50);
+      });
+    } catch (error) {
+      console.error("撮影に失敗しました:", error);
+    } finally {
+      isCapturingRef.current = false;
+      setIsCapturing(false);
+    }
   };
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
@@ -251,7 +356,24 @@ export default function App() {
         offsetX = (cvs.width - drawWidth) / 2;
       }
 
-      ctx.drawImage(vid, offsetX, offsetY, drawWidth, drawHeight);
+      // ズーム効果を適用（外カムの場合のみ）
+      if (!isFrontCamera) {
+        const zoom = displayZoom;
+        const zoomedWidth = drawWidth / zoom;
+        const zoomedHeight = drawHeight / zoom;
+        const zoomedOffsetX = offsetX + (drawWidth - zoomedWidth) / 2;
+        const zoomedOffsetY = offsetY + (drawHeight - zoomedHeight) / 2;
+
+        ctx.drawImage(
+          vid,
+          zoomedOffsetX,
+          zoomedOffsetY,
+          zoomedWidth,
+          zoomedHeight
+        );
+      } else {
+        ctx.drawImage(vid, offsetX, offsetY, drawWidth, drawHeight);
+      }
 
       // エフェクト画像のアスペクト比を維持して描画
       const effect = bitmaps[current];
@@ -271,8 +393,13 @@ export default function App() {
       raf = requestAnimationFrame(draw);
     };
     draw();
-    return () => cancelAnimationFrame(raf);
-  }, [ready, current, bitmaps]);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [ready, current, bitmaps, displayZoom, isFrontCamera]);
 
   /* ---------- UI ---------- */
   return (
@@ -323,22 +450,33 @@ export default function App() {
               {isFrontCamera ? "外カメラ" : "インカム"}
             </button>
           )}
-          <button onClick={takePhoto}>撮影</button>
+          <button
+            onClick={takePhoto}
+            disabled={isCapturing}
+            style={{
+              opacity: isCapturing ? 0.5 : 1,
+              transition: "opacity 0.2s",
+            }}
+          >
+            {isCapturing ? "撮影中..." : "撮影"}
+          </button>
         </div>
 
-        {isZoomSupported ? (
+        {isZoomSupported && !isFrontCamera ? (
           <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
             <button onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}>
               -
             </button>
-            <span>ズーム: {zoom.toFixed(1)}x</span>
+            <span>ズーム: {displayZoom.toFixed(1)}x</span>
             <button onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}>
               +
             </button>
           </div>
         ) : (
           <div style={{color: "#666", fontSize: "0.9em"}}>
-            ズーム機能はこのデバイスでは利用できません
+            {isFrontCamera
+              ? "インカムではズーム機能は利用できません"
+              : "ズーム機能はこのデバイスでは利用できません"}
           </div>
         )}
       </div>
