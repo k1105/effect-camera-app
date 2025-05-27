@@ -108,10 +108,14 @@ export default function App() {
   };
 
   const handleZoom = async (newZoom: number) => {
-    if (!isZoomSupported || isFrontCamera) {
-      console.log(
-        "ズーム機能はこのデバイスではサポートされていないか、インカムでは利用できません"
-      );
+    if (!isZoomSupported) {
+      console.log("ズーム機能はこのデバイスではサポートされていません");
+      return;
+    }
+
+    // インカムの場合はズームを適用しない
+    if (isFrontCamera) {
+      console.log("インカムではズーム機能は利用できません");
       return;
     }
 
@@ -462,21 +466,25 @@ export default function App() {
           </button>
         </div>
 
-        {isZoomSupported && !isFrontCamera ? (
+        {isZoomSupported ? (
           <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
-            <button onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}>
+            <button
+              onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}
+              disabled={isFrontCamera}
+            >
               -
             </button>
             <span>ズーム: {displayZoom.toFixed(1)}x</span>
-            <button onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}>
+            <button
+              onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}
+              disabled={isFrontCamera}
+            >
               +
             </button>
           </div>
         ) : (
           <div style={{color: "#666", fontSize: "0.9em"}}>
-            {isFrontCamera
-              ? "インカムではズーム機能は利用できません"
-              : "ズーム機能はこのデバイスでは利用できません"}
+            ズーム機能はこのデバイスでは利用できません
           </div>
         )}
       </div>
