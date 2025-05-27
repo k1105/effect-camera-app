@@ -1,5 +1,9 @@
 import {useEffect, useRef, useState} from "react";
 import {openDB} from "idb";
+import {CameraControls} from "./components/CameraControls";
+import {PreviewScreen} from "./components/PreviewScreen";
+import {EffectSelector} from "./components/EffectSelector";
+import {ZoomControl} from "./components/ZoomControl";
 
 /* ---------- 定数 ---------- */
 const DB_NAME = "effects-db";
@@ -300,42 +304,12 @@ export default function App() {
     <>
       <video ref={videoRef} style={{display: "none"}} playsInline muted />
 
-      {isPreviewMode ? (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "#000",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "20px",
-            zIndex: 2,
-          }}
-        >
-          <img
-            src={previewImage!}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "80vh",
-              objectFit: "contain",
-            }}
-            alt="Preview"
-          />
-          <div
-            style={{
-              display: "flex",
-              gap: "20px",
-            }}
-          >
-            <button onClick={backToCamera}>戻る</button>
-            <button onClick={downloadPhoto}>保存</button>
-          </div>
-        </div>
+      {isPreviewMode && previewImage ? (
+        <PreviewScreen
+          previewImage={previewImage}
+          onBack={backToCamera}
+          onDownload={downloadPhoto}
+        />
       ) : (
         <>
           <canvas
@@ -364,37 +338,21 @@ export default function App() {
               zIndex: 1,
             }}
           >
-            <div style={{display: "flex", gap: "10px"}}>
-              {EFFECTS.map((_, i) => (
-                <button
-                  key={i}
-                  className={current === i ? "active" : ""}
-                  onClick={() => setCurrent(i)}
-                >
-                  Effect {i + 1}
-                </button>
-              ))}
-            </div>
+            <EffectSelector
+              effects={EFFECTS}
+              current={current}
+              onChange={setCurrent}
+            />
 
-            <div style={{display: "flex", gap: "10px"}}>
-              {hasMultipleCameras && (
-                <button onClick={switchCamera}>
-                  {isFrontCamera ? "外カメラ" : "インカム"}
-                </button>
-              )}
-              <button onClick={takePhoto}>撮影</button>
-            </div>
+            <CameraControls
+              hasMultipleCameras={hasMultipleCameras}
+              isFrontCamera={isFrontCamera}
+              onSwitchCamera={switchCamera}
+              onTakePhoto={takePhoto}
+            />
 
             {isZoomSupported && !isFrontCamera && (
-              <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
-                <button onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}>
-                  -
-                </button>
-                <span>ズーム: {zoom.toFixed(1)}x</span>
-                <button onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}>
-                  +
-                </button>
-              </div>
+              <ZoomControl zoom={zoom} onZoomChange={handleZoom} />
             )}
           </div>
         </>
