@@ -162,8 +162,41 @@ export default function App() {
     link.click();
   };
 
-  const backToCamera = () => {
-    setPreviewImage(null);
+  const backToCamera = async () => {
+    try {
+      // 現在のストリームを停止
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      // カメラを再初期化
+      const constraints = {
+        video: {
+          facingMode: isFrontCamera ? "user" : "environment",
+          width: isFrontCamera ? {ideal: 1280} : {ideal: 3840},
+          height: isFrontCamera ? {ideal: 720} : {ideal: 2160},
+          frameRate: {ideal: 30},
+          zoom: zoom,
+        },
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // 新しいストリームの準備ができるまで待機
+        await new Promise<void>((res) => {
+          videoRef.current!.onloadedmetadata = () => res();
+        });
+        await videoRef.current.play();
+      }
+
+      // プレビューをクリア
+      setPreviewImage(null);
+    } catch (error) {
+      console.error("カメラの再初期化に失敗しました:", error);
+    }
   };
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
