@@ -58,20 +58,35 @@ export default function App() {
       }
 
       const newFacingMode = isFrontCamera ? "environment" : "user";
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // インカムの場合は解像度を下げる
+      const constraints = {
         video: {
           facingMode: newFacingMode,
-          width: {ideal: 3840},
-          height: {ideal: 2160},
+          width: newFacingMode === "user" ? {ideal: 1280} : {ideal: 3840},
+          height: newFacingMode === "user" ? {ideal: 720} : {ideal: 2160},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
-      });
+      };
+
+      console.log("カメラ切り替え:", constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // 新しいストリームを設定する前に、古いストリームを確実に停止
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // 新しいストリームの準備ができるまで待機
+        await new Promise<void>((res) => {
+          videoRef.current!.onloadedmetadata = () => res();
+        });
+        await videoRef.current.play();
       }
+
       setIsFrontCamera(!isFrontCamera);
 
       // ズーム機能のサポートを再確認
@@ -94,15 +109,31 @@ export default function App() {
       return;
     }
 
-    setZoom(newZoom);
+    // ズーム値を1.0から1.9の範囲に制限
+    const clampedZoom = Math.max(1.0, Math.min(1.9, newZoom));
+    setZoom(clampedZoom);
+
     if (streamRef.current) {
       const track = streamRef.current.getVideoTracks()[0];
       try {
-        await track.applyConstraints({
-          advanced: [{zoom: newZoom}],
-        });
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom) {
+          // デバイスがサポートするズーム範囲を確認
+          const minZoom = capabilities.zoom.min || 1.0;
+          const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
+          const deviceClampedZoom = Math.max(
+            minZoom,
+            Math.min(maxZoom, clampedZoom)
+          );
+
+          await track.applyConstraints({
+            advanced: [{zoom: deviceClampedZoom}],
+          });
+        }
       } catch (error) {
         console.error("ズームの設定に失敗しました:", error);
+        // ズーム設定に失敗した場合は、前の値に戻す
+        setZoom(zoom);
       }
     }
   };
@@ -297,11 +328,11 @@ export default function App() {
 
         {isZoomSupported ? (
           <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
-            <button onClick={() => handleZoom(Math.max(1, zoom - 0.1))}>
+            <button onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}>
               -
             </button>
             <span>ズーム: {zoom.toFixed(1)}x</span>
-            <button onClick={() => handleZoom(Math.min(5, zoom + 0.1))}>
+            <button onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}>
               +
             </button>
           </div>
