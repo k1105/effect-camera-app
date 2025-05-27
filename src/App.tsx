@@ -12,18 +12,15 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const initedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const isCapturingRef = useRef(false);
 
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(0);
   const [ready, setReady] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [displayZoom, setDisplayZoom] = useState(1); // 表示用のズーム値
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [isZoomSupported, setIsZoomSupported] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -108,35 +105,27 @@ export default function App() {
   };
 
   const handleZoom = async (newZoom: number) => {
-    if (!isZoomSupported) {
-      console.log("ズーム機能はこのデバイスではサポートされていません");
-      return;
-    }
-
-    // インカムの場合はズームを適用しない
+    // インカムの場合はズーム制御を無効化
     if (isFrontCamera) {
       console.log("インカムではズーム機能は利用できません");
       return;
     }
 
-    // ズーム値を1.0から1.9の範囲に制限
-    const clampedZoom = Math.max(1.0, Math.min(1.9, newZoom));
-
-    // 現在のアニメーションをキャンセル
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
+    if (!isZoomSupported) {
+      console.log("ズーム機能はこのデバイスではサポートされていません");
+      return;
     }
 
-    // 即座に表示用のズーム値を更新
-    setDisplayZoom(clampedZoom);
+    // ズーム値を1.0から1.9の範囲に制限
+    const clampedZoom = Math.max(1.0, Math.min(1.9, newZoom));
+    setZoom(clampedZoom);
 
-    // カメラのズームを設定
     if (streamRef.current) {
       const track = streamRef.current.getVideoTracks()[0];
       try {
         const capabilities = track.getCapabilities();
         if (capabilities.zoom) {
+          // デバイスがサポートするズーム範囲を確認
           const minZoom = capabilities.zoom.min || 1.0;
           const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
           const deviceClampedZoom = Math.max(
@@ -147,94 +136,34 @@ export default function App() {
           await track.applyConstraints({
             advanced: [{zoom: deviceClampedZoom}],
           });
-          setZoom(deviceClampedZoom);
         }
       } catch (error) {
         console.error("ズームの設定に失敗しました:", error);
-        // エラー時は前の値に戻す
-        setDisplayZoom(zoom);
+        // ズーム設定に失敗した場合は、前の値に戻す
+        setZoom(zoom);
       }
     }
   };
 
-  const takePhoto = async () => {
-    if (isCapturingRef.current) return;
-    isCapturingRef.current = true;
-    setIsCapturing(true);
+  const takePhoto = () => {
+    if (!canvasRef.current) return;
 
-    try {
-      const canvas = canvasRef.current!;
-      const ctx = canvas.getContext("2d")!;
+    const canvas = canvasRef.current;
+    const imageData = canvas.toDataURL("image/png");
+    setPreviewImage(imageData);
+  };
 
-      // 撮影時のフラッシュエフェクト
-      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const downloadPhoto = () => {
+    if (!previewImage) return;
 
-      // WebP形式で画像を生成（高品質、低サイズ）
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-          },
-          "image/webp",
-          0.9
-        );
-      });
+    const link = document.createElement("a");
+    link.download = `photo-${new Date().toISOString()}.png`;
+    link.href = previewImage;
+    link.click();
+  };
 
-      // メタデータを追加
-      const metadata = {
-        type: "image/webp",
-        lastModified: Date.now(),
-        name: `photo-${new Date().toISOString()}.webp`,
-      };
-
-      // ファイルとして保存
-      const file = new File([blob], metadata.name, {
-        type: metadata.type,
-        lastModified: metadata.lastModified,
-      });
-
-      // ダウンロードリンクを作成
-      const url = URL.createObjectURL(file);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = metadata.name;
-      link.click();
-
-      // メモリリークを防ぐためにURLを解放
-      URL.revokeObjectURL(url);
-
-      // 撮影成功のフィードバック
-      const flash = document.createElement("div");
-      flash.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: white;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.1s ease-out;
-      `;
-      document.body.appendChild(flash);
-
-      // フラッシュアニメーション
-      requestAnimationFrame(() => {
-        flash.style.opacity = "0.3";
-        setTimeout(() => {
-          flash.style.opacity = "0";
-          setTimeout(() => {
-            document.body.removeChild(flash);
-          }, 100);
-        }, 50);
-      });
-    } catch (error) {
-      console.error("撮影に失敗しました:", error);
-    } finally {
-      isCapturingRef.current = false;
-      setIsCapturing(false);
-    }
+  const backToCamera = () => {
+    setPreviewImage(null);
   };
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
@@ -340,24 +269,7 @@ export default function App() {
         offsetX = (cvs.width - drawWidth) / 2;
       }
 
-      // ズーム効果を適用（外カムの場合のみ）
-      if (!isFrontCamera) {
-        const zoom = displayZoom;
-        const zoomedWidth = drawWidth / zoom;
-        const zoomedHeight = drawHeight / zoom;
-        const zoomedOffsetX = offsetX + (drawWidth - zoomedWidth) / 2;
-        const zoomedOffsetY = offsetY + (drawHeight - zoomedHeight) / 2;
-
-        ctx.drawImage(
-          vid,
-          zoomedOffsetX,
-          zoomedOffsetY,
-          zoomedWidth,
-          zoomedHeight
-        );
-      } else {
-        ctx.drawImage(vid, offsetX, offsetY, drawWidth, drawHeight);
-      }
+      ctx.drawImage(vid, offsetX, offsetY, drawWidth, drawHeight);
 
       // エフェクト画像のアスペクト比を維持して描画
       const effect = bitmaps[current];
@@ -377,98 +289,112 @@ export default function App() {
       raf = requestAnimationFrame(draw);
     };
     draw();
-    return () => {
-      cancelAnimationFrame(raf);
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    };
-  }, [ready, current, bitmaps, displayZoom, isFrontCamera]);
+    return () => cancelAnimationFrame(raf);
+  }, [ready, current, bitmaps]);
 
   /* ---------- UI ---------- */
   return (
     <>
       <video ref={videoRef} style={{display: "none"}} playsInline muted />
 
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-        }}
-      ></canvas>
-
-      <div
-        className="controls"
-        style={{
-          position: "fixed",
-          bottom: 20,
-          left: 0,
-          right: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "10px",
-          zIndex: 1,
-        }}
-      >
-        <div style={{display: "flex", gap: "10px"}}>
-          {EFFECTS.map((_, i) => (
-            <button
-              key={i}
-              className={current === i ? "active" : ""}
-              onClick={() => setCurrent(i)}
-            >
-              Effect {i + 1}
-            </button>
-          ))}
-        </div>
-
-        <div style={{display: "flex", gap: "10px"}}>
-          {hasMultipleCameras && (
-            <button onClick={switchCamera}>
-              {isFrontCamera ? "外カメラ" : "インカム"}
-            </button>
-          )}
-          <button
-            onClick={takePhoto}
-            disabled={isCapturing}
+      {previewImage ? (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "#000",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "20px",
+          }}
+        >
+          <img
+            src={previewImage}
             style={{
-              opacity: isCapturing ? 0.5 : 1,
-              transition: "opacity 0.2s",
+              maxWidth: "100%",
+              maxHeight: "80vh",
+              objectFit: "contain",
+            }}
+            alt="Preview"
+          />
+          <div
+            style={{
+              display: "flex",
+              gap: "20px",
             }}
           >
-            {isCapturing ? "撮影中..." : "撮影"}
-          </button>
+            <button onClick={backToCamera}>戻る</button>
+            <button onClick={downloadPhoto}>保存</button>
+          </div>
         </div>
+      ) : (
+        <>
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+            }}
+          ></canvas>
 
-        {isZoomSupported ? (
-          <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
-            <button
-              onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}
-              disabled={isFrontCamera}
-            >
-              -
-            </button>
-            <span>ズーム: {displayZoom.toFixed(1)}x</span>
-            <button
-              onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}
-              disabled={isFrontCamera}
-            >
-              +
-            </button>
+          <div
+            className="controls"
+            style={{
+              position: "fixed",
+              bottom: 20,
+              left: 0,
+              right: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "10px",
+              zIndex: 1,
+            }}
+          >
+            <div style={{display: "flex", gap: "10px"}}>
+              {EFFECTS.map((_, i) => (
+                <button
+                  key={i}
+                  className={current === i ? "active" : ""}
+                  onClick={() => setCurrent(i)}
+                >
+                  Effect {i + 1}
+                </button>
+              ))}
+            </div>
+
+            <div style={{display: "flex", gap: "10px"}}>
+              {hasMultipleCameras && (
+                <button onClick={switchCamera}>
+                  {isFrontCamera ? "外カメラ" : "インカム"}
+                </button>
+              )}
+              <button onClick={takePhoto}>撮影</button>
+            </div>
+
+            {isZoomSupported && !isFrontCamera && (
+              <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
+                <button onClick={() => handleZoom(Math.max(1.0, zoom - 0.1))}>
+                  -
+                </button>
+                <span>ズーム: {zoom.toFixed(1)}x</span>
+                <button onClick={() => handleZoom(Math.min(1.9, zoom + 0.1))}>
+                  +
+                </button>
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={{color: "#666", fontSize: "0.9em"}}>
-            ズーム機能はこのデバイスでは利用できません
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </>
   );
 }
