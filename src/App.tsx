@@ -10,62 +10,171 @@ export default function App() {
   /* ---------- Refs & State ---------- */
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const initedRef = useRef(false); // ★二重実行防止フラグ
+  const initedRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(0);
-  const [ready, setReady] = useState(false); // video + effects 完了
+  const [ready, setReady] = useState(false);
+  const [isFrontCamera, setIsFrontCamera] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
+  const [isZoomSupported, setIsZoomSupported] = useState(false);
+
+  /* ---------- カメラ制御関数 ---------- */
+  const checkCameraAvailability = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        (device) => device.kind === "videoinput"
+      );
+      setHasMultipleCameras(videoDevices.length > 1);
+      return videoDevices.length > 1;
+    } catch (error) {
+      console.error("カメラの確認に失敗しました:", error);
+      return false;
+    }
+  };
+
+  const checkZoomSupport = async () => {
+    if (!streamRef.current) return false;
+    const track = streamRef.current.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+    const supported = !!capabilities.zoom;
+    setIsZoomSupported(supported);
+    return supported;
+  };
+
+  const switchCamera = async () => {
+    try {
+      const canSwitch = await checkCameraAvailability();
+      if (!canSwitch) {
+        console.log("利用可能なカメラが1つしかありません");
+        return;
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      const newFacingMode = isFrontCamera ? "environment" : "user";
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: newFacingMode,
+          width: {ideal: 3840},
+          height: {ideal: 2160},
+          frameRate: {ideal: 30},
+          zoom: zoom,
+        },
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsFrontCamera(!isFrontCamera);
+
+      // ズーム機能のサポートを再確認
+      await checkZoomSupport();
+    } catch (error) {
+      console.error("カメラの切り替えに失敗しました:", error);
+      // エラーが発生した場合は元の状態を維持
+      if (streamRef.current) {
+        const currentStream = streamRef.current;
+        if (videoRef.current) {
+          videoRef.current.srcObject = currentStream;
+        }
+      }
+    }
+  };
+
+  const handleZoom = async (newZoom: number) => {
+    if (!isZoomSupported) {
+      console.log("ズーム機能はこのデバイスではサポートされていません");
+      return;
+    }
+
+    setZoom(newZoom);
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      try {
+        await track.applyConstraints({
+          advanced: [{zoom: newZoom}],
+        });
+      } catch (error) {
+        console.error("ズームの設定に失敗しました:", error);
+      }
+    }
+  };
+
+  const takePhoto = () => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const link = document.createElement("a");
+    link.download = `photo-${new Date().toISOString()}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
   useEffect(() => {
-    if (initedRef.current) return; // ← StrictMode の 2 回目を無視
+    if (initedRef.current) return;
     initedRef.current = true;
 
     (async () => {
-      /* -- a) カメラ -- */
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: {ideal: 3840}, // 4K解像度
-          height: {ideal: 2160},
-          frameRate: {ideal: 30},
-        },
-      });
-      const vid = videoRef.current!;
-      vid.srcObject = stream;
+      try {
+        /* -- a) カメラ -- */
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "environment",
+            width: {ideal: 3840},
+            height: {ideal: 2160},
+            frameRate: {ideal: 30},
+            zoom: zoom,
+          },
+        });
+        streamRef.current = stream;
+        const vid = videoRef.current!;
+        vid.srcObject = stream;
 
-      // metadata が来てから play
-      await new Promise<void>((res) => {
-        vid.onloadedmetadata = () => res();
-      });
-      await vid.play();
+        // metadata が来てから play
+        await new Promise<void>((res) => {
+          vid.onloadedmetadata = () => res();
+        });
+        await vid.play();
 
-      /* -- b) エフェクト画像 -- */
-      const db = await openDB(DB_NAME, 1, {
-        upgrade(db) {
-          db.createObjectStore(STORE);
-        },
-      });
-      const imgs: ImageBitmap[] = [];
+        // カメラの可用性とズーム機能のサポートを確認
+        await checkCameraAvailability();
+        await checkZoomSupport();
 
-      for (const key of EFFECTS) {
-        let blob = await db.get(STORE, key);
-        if (!blob) {
-          blob = await fetch(`/assets/${key}.png`).then((r) => r.blob());
-          await db.put(STORE, blob, key);
+        /* -- b) エフェクト画像 -- */
+        const db = await openDB(DB_NAME, 1, {
+          upgrade(db) {
+            db.createObjectStore(STORE);
+          },
+        });
+        const imgs: ImageBitmap[] = [];
+
+        for (const key of EFFECTS) {
+          let blob = await db.get(STORE, key);
+          if (!blob) {
+            blob = await fetch(`/assets/${key}.png`).then((r) => r.blob());
+            await db.put(STORE, blob, key);
+          }
+          imgs.push(await createImageBitmap(blob));
         }
-        imgs.push(await createImageBitmap(blob));
+        setBitmaps(imgs);
+        setReady(true);
+      } catch (error) {
+        console.error("Init failed:", error);
       }
-      setBitmaps(imgs);
-      setReady(true);
-    })().catch((e) => console.error("Init failed:", e));
+    })();
 
     /* -- クリーンアップ -- */
     return () => {
-      if (videoRef.current?.srcObject) {
-        (videoRef.current.srcObject as MediaStream)
-          .getTracks()
-          .forEach((t) => t.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
   }, []);
@@ -159,20 +268,48 @@ export default function App() {
           left: 0,
           right: 0,
           display: "flex",
-          justifyContent: "center",
+          flexDirection: "column",
+          alignItems: "center",
           gap: "10px",
           zIndex: 1,
         }}
       >
-        {EFFECTS.map((_, i) => (
-          <button
-            key={i}
-            className={current === i ? "active" : ""}
-            onClick={() => setCurrent(i)}
-          >
-            Effect {i + 1}
-          </button>
-        ))}
+        <div style={{display: "flex", gap: "10px"}}>
+          {EFFECTS.map((_, i) => (
+            <button
+              key={i}
+              className={current === i ? "active" : ""}
+              onClick={() => setCurrent(i)}
+            >
+              Effect {i + 1}
+            </button>
+          ))}
+        </div>
+
+        <div style={{display: "flex", gap: "10px"}}>
+          {hasMultipleCameras && (
+            <button onClick={switchCamera}>
+              {isFrontCamera ? "外カメラ" : "インカム"}
+            </button>
+          )}
+          <button onClick={takePhoto}>撮影</button>
+        </div>
+
+        {isZoomSupported ? (
+          <div style={{display: "flex", gap: "10px", alignItems: "center"}}>
+            <button onClick={() => handleZoom(Math.max(1, zoom - 0.1))}>
+              -
+            </button>
+            <span>ズーム: {zoom.toFixed(1)}x</span>
+            <button onClick={() => handleZoom(Math.min(5, zoom + 0.1))}>
+              +
+            </button>
+          </div>
+        ) : (
+          <div style={{color: "#666", fontSize: "0.9em"}}>
+            ズーム機能はこのデバイスでは利用できません
+          </div>
+        )}
       </div>
     </>
   );
