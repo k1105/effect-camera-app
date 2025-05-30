@@ -9,6 +9,7 @@ import {ZoomControl} from "./components/ZoomControl";
 const DB_NAME = "effects-db";
 const STORE = "effects";
 const EFFECTS = ["effect1", "effect2"]; // public/assets/effect?.png
+const WS_SERVER = "ws://localhost:8080"; // WebSocketサーバーのアドレス
 
 export default function App() {
   /* ---------- Refs & State ---------- */
@@ -16,6 +17,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const initedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(0);
@@ -298,6 +300,53 @@ export default function App() {
     draw();
     return () => cancelAnimationFrame(raf);
   }, [ready, current, bitmaps, isPreviewMode]);
+
+  /* ---------- WebSocket接続 ---------- */
+  useEffect(() => {
+    // WebSocket接続を確立
+    const ws = new WebSocket(WS_SERVER);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("WebSocketサーバーに接続しました");
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("受信したメッセージ:", data);
+
+        // effectIdが0-15の範囲内かチェック
+        if (data.effectId >= 0 && data.effectId <= 15) {
+          // 現在利用可能なエフェクトの数（2個）で割った余りを使用
+          if (data.effectId < EFFECTS.length) {
+            setCurrent(data.effectId);
+          } else {
+            console.log("無効なエフェクトIDを受信:", data.effectId);
+          }
+        } else {
+          console.log("無効なエフェクトIDを受信:", data.effectId);
+        }
+      } catch (error) {
+        console.error("メッセージのパースに失敗:", error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocketエラー:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket接続が切断されました");
+    };
+
+    // クリーンアップ
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
 
   /* ---------- UI ---------- */
   return (
