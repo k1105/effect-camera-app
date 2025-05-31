@@ -4,12 +4,22 @@ import {CameraControls} from "./components/CameraControls";
 import {PreviewScreen} from "./components/PreviewScreen";
 import {EffectSelector} from "./components/EffectSelector";
 import {ZoomControl} from "./components/ZoomControl";
+import {CameraCanvas} from "./components/CameraCanvas";
 
 /* ---------- 定数 ---------- */
 const DB_NAME = "effects-db";
 const STORE = "effects";
 const EFFECTS = ["effect1", "effect2"]; // public/assets/effect?.png
 const WS_SERVER = "ws://localhost:8080"; // WebSocketサーバーのアドレス
+
+const BLEND_MODES = [
+  {value: "source-over", label: "通常"},
+  {value: "multiply", label: "乗算"},
+  {value: "screen", label: "スクリーン"},
+  {value: "overlay", label: "オーバーレイ"},
+  {value: "soft-light", label: "ソフトライト"},
+  {value: "hard-light", label: "ハードライト"},
+] as const;
 
 export default function App() {
   /* ---------- Refs & State ---------- */
@@ -28,6 +38,9 @@ export default function App() {
   const [isZoomSupported, setIsZoomSupported] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [blendMode, setBlendMode] =
+    useState<(typeof BLEND_MODES)[number]["value"]>("source-over");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -60,6 +73,8 @@ export default function App() {
         console.log("利用可能なカメラが1つしかありません");
         return;
       }
+
+      setIsSwitchingCamera(true);
 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -108,6 +123,8 @@ export default function App() {
           videoRef.current.srcObject = currentStream;
         }
       }
+    } finally {
+      setIsSwitchingCamera(false);
     }
   };
 
@@ -152,10 +169,7 @@ export default function App() {
     }
   };
 
-  const takePhoto = () => {
-    if (!canvasRef.current) return;
-
-    const canvas = canvasRef.current;
+  const takePhoto = (canvas: HTMLCanvasElement) => {
     const imageData = canvas.toDataURL("image/png");
     setPreviewImage(imageData);
     setIsPreviewMode(true);
@@ -237,70 +251,6 @@ export default function App() {
     };
   }, []);
 
-  /* ---------- 2) 描画ループ ---------- */
-  useEffect(() => {
-    if (!ready || isPreviewMode) return;
-
-    let raf = 0;
-    const draw = () => {
-      const cvs = canvasRef.current!;
-      const ctx = cvs.getContext("2d")!;
-      const vid = videoRef.current!;
-
-      // カメラの解像度を維持したまま、canvasの表示サイズをビューポートに合わせる
-      const displayWidth = window.innerWidth;
-      const displayHeight = window.innerHeight;
-
-      // canvasの実際の解像度はカメラの解像度に合わせる
-      if (cvs.width !== vid.videoWidth || cvs.height !== vid.videoHeight) {
-        cvs.width = vid.videoWidth;
-        cvs.height = vid.videoHeight;
-      }
-
-      // カメラ映像を描画（アスペクト比を維持）
-      const videoAspect = vid.videoWidth / vid.videoHeight;
-      const displayAspect = displayWidth / displayHeight;
-
-      let drawWidth,
-        drawHeight,
-        offsetX = 0,
-        offsetY = 0;
-
-      if (videoAspect > displayAspect) {
-        // カメラが横長の場合
-        drawWidth = cvs.width;
-        drawHeight = drawWidth / videoAspect;
-        offsetY = (cvs.height - drawHeight) / 2;
-      } else {
-        // カメラが縦長の場合
-        drawHeight = cvs.height;
-        drawWidth = drawHeight * videoAspect;
-        offsetX = (cvs.width - drawWidth) / 2;
-      }
-
-      ctx.drawImage(vid, offsetX, offsetY, drawWidth, drawHeight);
-
-      // エフェクト画像のアスペクト比を維持して描画
-      const effect = bitmaps[current];
-      const effectAspect = effect.width / effect.height;
-
-      if (effectAspect > displayAspect) {
-        drawWidth = cvs.width;
-        drawHeight = drawWidth / effectAspect;
-        offsetY = (cvs.height - drawHeight) / 2;
-      } else {
-        drawHeight = cvs.height;
-        drawWidth = drawHeight * effectAspect;
-        offsetX = (cvs.width - drawWidth) / 2;
-      }
-
-      ctx.drawImage(effect, offsetX, offsetY, drawWidth, drawHeight);
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => cancelAnimationFrame(raf);
-  }, [ready, current, bitmaps, isPreviewMode]);
-
   /* ---------- WebSocket接続 ---------- */
   useEffect(() => {
     // WebSocket接続を確立
@@ -361,17 +311,16 @@ export default function App() {
         />
       ) : (
         <>
-          <canvas
-            ref={canvasRef}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-            }}
-          ></canvas>
+          <CameraCanvas
+            videoRef={videoRef}
+            bitmaps={bitmaps}
+            current={current}
+            ready={ready}
+            isPreviewMode={isPreviewMode}
+            onTakePhoto={takePhoto}
+            blendMode={blendMode}
+            isSwitchingCamera={isSwitchingCamera}
+          />
 
           <div
             className="controls"
@@ -393,11 +342,31 @@ export default function App() {
               onChange={setCurrent}
             />
 
+            <select
+              value={blendMode}
+              onChange={(e) => setBlendMode(e.target.value as typeof blendMode)}
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                backgroundColor: "white",
+                color: "black",
+              }}
+            >
+              {BLEND_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  {mode.label}
+                </option>
+              ))}
+            </select>
+
             <CameraControls
               hasMultipleCameras={hasMultipleCameras}
               isFrontCamera={isFrontCamera}
               onSwitchCamera={switchCamera}
-              onTakePhoto={takePhoto}
+              onTakePhoto={() =>
+                canvasRef.current && takePhoto(canvasRef.current)
+              }
             />
 
             {isZoomSupported && !isFrontCamera && (
