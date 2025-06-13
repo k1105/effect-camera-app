@@ -2,13 +2,13 @@ import {useEffect, useRef, useState} from "react";
 
 // システム設定
 const CONFIG = {
-  BASE_FREQ: 18000, // 基本周波数
-  FREQ_RANGE: 1000, // 周波数範囲
+  BASE_FREQ: 17000, // 基本周波数
+  FREQ_RANGE: 2000, // 周波数範囲
   NUM_CHANNELS: 32, // チャンネル数
   SIGNAL_DURATION: 1.0, // 信号長（秒）
   SAMPLE_RATE: 44100, // サンプリングレート
-  FFT_SIZE: 8192, // FFT サイズ
-  DETECTION_THRESHOLD: 0.25, // 検出閾値
+  FFT_SIZE: 1024, // FFT サイズ
+  DETECTION_THRESHOLD: 0.3, // 検出閾値
   SMOOTHING: 0.8, // スムージング係数
 };
 
