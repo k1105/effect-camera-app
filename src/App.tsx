@@ -288,7 +288,7 @@ function FullCameraApp() {
               bottom: 20,
               left: 0,
               right: 0,
-              display: "flex",
+              display: "none",
               flexDirection: "column",
               alignItems: "center",
               gap: "10px",
