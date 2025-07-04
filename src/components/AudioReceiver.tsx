@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useRef} from "react";
 
 // システム設定
 const CONFIG = {
@@ -28,12 +28,6 @@ export function AudioReceiver({
   onEffectDetected,
   availableEffects,
 }: AudioReceiverProps) {
-  const [isReceiving, setIsReceiving] = useState(false);
-  const [detectedFrequency, setDetectedFrequency] = useState<number>(0);
-  const [signalStrength, setSignalStrength] = useState<number>(0);
-  const [status, setStatus] = useState<string>("待機中");
-  const [lastDetectedChannel, setLastDetectedChannel] = useState<number>(-1);
-
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -45,8 +39,7 @@ export function AudioReceiver({
   // マイクアクセス要求
   const requestMicrophoneAccess = async () => {
     try {
-      setStatus("マイクアクセスを要求中...");
-
+      console.log("AudioReceiver: マイクアクセス要求中...");
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: CONFIG.SAMPLE_RATE,
@@ -56,6 +49,8 @@ export function AudioReceiver({
           autoGainControl: false,
         },
       });
+
+      console.log("AudioReceiver: マイクアクセス成功");
 
       // AudioContextの作成
       const AudioContextClass =
@@ -83,11 +78,10 @@ export function AudioReceiver({
       microphoneRef.current.connect(filterRef.current);
       filterRef.current.connect(analyserRef.current);
 
-      setStatus("マイクアクセス許可完了 - 受信準備完了");
+      console.log("AudioReceiver: 音声処理パイプライン構築完了");
       return true;
     } catch (error) {
       console.error("マイクアクセスエラー:", error);
-      setStatus("マイクアクセスに失敗しました");
       return false;
     }
   };
@@ -100,8 +94,12 @@ export function AudioReceiver({
 
   // 検出ループ開始
   const startDetectionLoop = () => {
-    if (!analyserRef.current) return;
+    if (!analyserRef.current) {
+      console.log("AudioReceiver: analyserがnullです");
+      return;
+    }
 
+    console.log("AudioReceiver: 検出ループ開始");
     const bufferLength = analyserRef.current.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
@@ -112,7 +110,22 @@ export function AudioReceiver({
 
       let maxIntensity = 0;
       let detectedChannel = -1;
-      let detectedFrequency = 0;
+      let overallMaxIntensity = 0;
+
+      // 全体的な音声レベルをチェック
+      for (let i = 0; i < bufferLength; i++) {
+        const intensity = dataArray[i] / 255.0;
+        if (intensity > overallMaxIntensity) {
+          overallMaxIntensity = intensity;
+        }
+      }
+
+      // 音声レベルが一定以上の場合のみログを出力（デバッグ用）
+      if (overallMaxIntensity > 0.01) {
+        console.log(
+          `AudioReceiver: 全体的な音声レベル: ${overallMaxIntensity.toFixed(3)}`
+        );
+      }
 
       // 各チャンネルの強度をチェック
       for (let channel = 0; channel < CONFIG.NUM_CHANNELS; channel++) {
@@ -138,27 +151,26 @@ export function AudioReceiver({
           ) {
             maxIntensity = intensity;
             detectedChannel = channel;
-            detectedFrequency = frequency;
           }
         }
       }
 
-      // UI更新
-      setDetectedFrequency(detectedFrequency);
-      setSignalStrength(maxIntensity * 100);
-
       // エフェクト検出処理
       if (detectedChannel !== -1 && !effectCooldownRef.current) {
-        setLastDetectedChannel(detectedChannel);
+        console.log(
+          `AudioReceiver: チャンネル ${detectedChannel} を検出 (強度: ${maxIntensity.toFixed(
+            3
+          )})`
+        );
 
         // 利用可能なエフェクトの範囲内かチェック
         if (detectedChannel < availableEffects) {
+          console.log(`AudioReceiver: エフェクト ${detectedChannel} を実行`);
           onEffectDetected(detectedChannel);
           lastDetectedEffectRef.current = detectedChannel;
-          setStatus(`🎧 エフェクト ${detectedChannel + 1} を検出`);
         } else {
-          setStatus(
-            `⚠️ 未対応の信号 (チャンネル ${detectedChannel + 1}) を検出`
+          console.log(
+            `AudioReceiver: 未対応のチャンネル ${detectedChannel} (利用可能: ${availableEffects})`
           );
         }
 
@@ -173,19 +185,27 @@ export function AudioReceiver({
 
   // 受信開始
   const startReceiving = async () => {
+    console.log("AudioReceiver: startReceiving開始");
+
     if (!audioContextRef.current) {
+      console.log(
+        "AudioReceiver: AudioContextが存在しないため、マイクアクセスを要求"
+      );
       const success = await requestMicrophoneAccess();
-      if (!success) return;
+      if (!success) {
+        console.log("AudioReceiver: マイクアクセスに失敗");
+        return;
+      }
     }
 
     const audioContext = audioContextRef.current;
     if (audioContext && audioContext.state === "suspended") {
+      console.log("AudioReceiver: AudioContextを再開");
       await audioContext.resume();
     }
 
+    console.log("AudioReceiver: 検出ループを開始");
     startDetectionLoop();
-    setIsReceiving(true);
-    setStatus("🎧 音波信号を受信中...");
   };
 
   // 受信停止
@@ -195,18 +215,23 @@ export function AudioReceiver({
       detectionIntervalRef.current = null;
     }
 
-    setIsReceiving(false);
     effectCooldownRef.current = false;
     lastDetectedEffectRef.current = -1;
-    setStatus("受信を停止しました");
-    setDetectedFrequency(0);
-    setSignalStrength(0);
-    setLastDetectedChannel(-1);
   };
 
-  // クリーンアップ
+  // 自動的に受信を開始
   useEffect(() => {
+    console.log("AudioReceiver: 受信開始");
+
+    // 少し遅延させてから受信開始
+    const timer = setTimeout(() => {
+      startReceiving();
+    }, 100);
+
+    // クリーンアップ
     return () => {
+      console.log("AudioReceiver: クリーンアップ");
+      clearTimeout(timer);
       stopReceiving();
       if (microphoneRef.current) {
         microphoneRef.current.disconnect();
@@ -217,66 +242,5 @@ export function AudioReceiver({
     };
   }, []);
 
-  return (
-    <div
-      style={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        padding: "20px",
-        borderRadius: "10px",
-        color: "white",
-        textAlign: "center",
-        zIndex: 1000,
-      }}
-    >
-      <div style={{marginBottom: "10px"}}>ステータス: {status}</div>
-      <div style={{marginBottom: "10px"}}>
-        検出周波数:{" "}
-        {detectedFrequency > 0 ? `${detectedFrequency.toFixed(1)}Hz` : "---"}
-      </div>
-      <div style={{marginBottom: "10px"}}>
-        信号強度: {Math.round(signalStrength)}%
-      </div>
-      <div style={{marginBottom: "10px"}}>
-        検出チャンネル:{" "}
-        {lastDetectedChannel >= 0 ? lastDetectedChannel + 1 : "---"}
-      </div>
-      <div
-        style={{
-          width: "200px",
-          height: "10px",
-          backgroundColor: "#333",
-          borderRadius: "5px",
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            width: `${signalStrength}%`,
-            height: "100%",
-            backgroundColor: "#4CAF50",
-            borderRadius: "5px",
-            transition: "width 0.1s ease-in-out",
-          }}
-        />
-      </div>
-      <button
-        onClick={isReceiving ? stopReceiving : startReceiving}
-        style={{
-          marginTop: "10px",
-          padding: "8px 16px",
-          backgroundColor: isReceiving ? "#f44336" : "#4CAF50",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-        }}
-      >
-        {isReceiving ? "停止" : "開始"}
-      </button>
-    </div>
-  );
+  return null; // UIを表示しない
 }

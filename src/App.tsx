@@ -1,11 +1,13 @@
 import {useEffect, useRef, useState} from "react";
 import {openDB} from "idb";
+import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import {CameraControls} from "./components/CameraControls";
 import {PreviewScreen} from "./components/PreviewScreen";
 import {EffectSelector} from "./components/EffectSelector";
 import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
+import SimpleCameraPage from "./pages/SimpleCameraPage";
 
 /* ---------- 定数 ---------- */
 const DB_NAME = "effects-db";
@@ -21,7 +23,7 @@ const BLEND_MODES = [
   {value: "hard-light", label: "ハードライト"},
 ] as const;
 
-export default function App() {
+function FullCameraApp() {
   /* ---------- Refs & State ---------- */
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -333,5 +335,25 @@ export default function App() {
         </>
       )}
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Routes>
+          <Route path="/" element={<FullCameraApp />} />
+          <Route path="/simple" element={<SimpleCameraPage />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
