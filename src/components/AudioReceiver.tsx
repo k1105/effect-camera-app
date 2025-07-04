@@ -15,6 +15,7 @@ const CONFIG = {
 interface AudioReceiverProps {
   onEffectDetected: (effectId: number) => void;
   availableEffects: number; // 利用可能なエフェクトの数を追加
+  onNoSignalDetected?: () => void; // 信号が検出されていない状態を通知
 }
 
 // WebKitAudioContextの型定義
@@ -27,6 +28,7 @@ declare global {
 export function AudioReceiver({
   onEffectDetected,
   availableEffects,
+  onNoSignalDetected,
 }: AudioReceiverProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -35,6 +37,8 @@ export function AudioReceiver({
   const detectionIntervalRef = useRef<number | null>(null);
   const lastDetectedEffectRef = useRef<number>(-1);
   const effectCooldownRef = useRef<boolean>(false);
+  const noSignalTimerRef = useRef<number | null>(null);
+  const lastSignalTimeRef = useRef<number>(Date.now());
 
   // マイクアクセス要求
   const requestMicrophoneAccess = async () => {
@@ -163,6 +167,9 @@ export function AudioReceiver({
           )})`
         );
 
+        // 信号を検出した時刻を更新
+        lastSignalTimeRef.current = Date.now();
+
         // 利用可能なエフェクトの範囲内かチェック
         if (detectedChannel < availableEffects) {
           console.log(`AudioReceiver: エフェクト ${detectedChannel} を実行`);
@@ -179,6 +186,21 @@ export function AudioReceiver({
         setTimeout(() => {
           effectCooldownRef.current = false;
         }, 500);
+      }
+
+      // 信号が検出されていない状態のチェック
+      const timeSinceLastSignal = Date.now() - lastSignalTimeRef.current;
+      if (timeSinceLastSignal > 2000 && onNoSignalDetected) {
+        // 2秒間信号がない場合
+        // 既存のタイマーをクリア
+        if (noSignalTimerRef.current) {
+          clearTimeout(noSignalTimerRef.current);
+        }
+
+        // 新しいタイマーを設定（連続呼び出しを防ぐため）
+        noSignalTimerRef.current = window.setTimeout(() => {
+          onNoSignalDetected();
+        }, 100);
       }
     }, 50);
   };
@@ -213,6 +235,11 @@ export function AudioReceiver({
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
       detectionIntervalRef.current = null;
+    }
+
+    if (noSignalTimerRef.current) {
+      clearTimeout(noSignalTimerRef.current);
+      noSignalTimerRef.current = null;
     }
 
     effectCooldownRef.current = false;

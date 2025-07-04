@@ -7,6 +7,7 @@ import {EffectSelector} from "./components/EffectSelector";
 import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
+import {LogoAnimation} from "./components/LogoAnimation";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 
 /* ---------- 定数 ---------- */
@@ -31,7 +32,7 @@ function FullCameraApp() {
   const streamRef = useRef<MediaStream | null>(null);
 
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(-1); // 初期値は-1（エフェクトなし）
   const [ready, setReady] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -42,6 +43,7 @@ function FullCameraApp() {
   const [blendMode, setBlendMode] =
     useState<(typeof BLEND_MODES)[number]["value"]>("source-over");
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+  const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -190,6 +192,15 @@ function FullCameraApp() {
     setIsPreviewMode(false);
   };
 
+  const handleEffectDetected = (effectId: number) => {
+    setCurrent(effectId);
+    setIsNoSignalDetected(false); // エフェクトが検出されたら信号なし状態を解除
+  };
+
+  const handleNoSignalDetected = () => {
+    setIsNoSignalDetected(true); // 信号が検出されていない状態に設定
+  };
+
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
   useEffect(() => {
     if (initedRef.current) return;
@@ -277,9 +288,13 @@ function FullCameraApp() {
           />
 
           <AudioReceiver
-            onEffectDetected={setCurrent}
+            onEffectDetected={handleEffectDetected}
             availableEffects={EFFECTS.length}
+            onNoSignalDetected={handleNoSignalDetected}
           />
+
+          {/* ロゴアニメーション - 信号が検出されていない時のみ表示 */}
+          <LogoAnimation isVisible={isNoSignalDetected} />
 
           <div
             className="controls"
@@ -289,6 +304,7 @@ function FullCameraApp() {
               left: 0,
               right: 0,
               display: "none",
+              pointerEvents: "none",
               flexDirection: "column",
               alignItems: "center",
               gap: "10px",

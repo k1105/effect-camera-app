@@ -81,7 +81,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       );
 
       // カメラ切り替え中はエフェクトを表示しない
-      if (!isSwitchingCamera) {
+      if (!isSwitchingCamera && current >= 0) {
+        // currentが-1の場合はエフェクトを表示しない
         // エフェクト画像を合成モードを指定して描画
         const effect = bitmaps[current];
         const effectAspect = effect.width / effect.height;
