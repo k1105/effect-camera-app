@@ -18,6 +18,7 @@ export default function SimpleCamera() {
   const [current, setCurrent] = useState(0);
   const [ready, setReady] = useState(false);
   const [blendMode] = useState<"source-over">("source-over");
+  const [error, setError] = useState<string | null>(null);
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function SimpleCamera() {
         console.log("SimpleCamera: エフェクト画像読み込み完了");
       } catch (error) {
         console.error("Init failed:", error);
+        setError("カメラまたはエフェクトの初期化に失敗しました。");
       }
     })();
 
@@ -85,6 +87,26 @@ export default function SimpleCamera() {
   /* ---------- UI ---------- */
   return (
     <>
+      {error && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            color: "white",
+            padding: "20px",
+            borderRadius: "10px",
+            textAlign: "center",
+            zIndex: 1000,
+          }}
+        >
+          <h3>エラー</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
       <video ref={videoRef} style={{display: "none"}} playsInline muted />
 
       <CameraCanvas

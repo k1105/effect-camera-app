@@ -4,21 +4,43 @@ import SimpleCamera from "../SimpleCamera";
 export default function SimpleCameraPage() {
   const [showPermissionModal, setShowPermissionModal] = useState(true);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   const requestPermissions = async () => {
     try {
+      console.log("SimpleCameraPage: 権限要求開始");
       // カメラとマイクの許可を要求
       await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
 
+      console.log("SimpleCameraPage: 権限取得成功");
       setPermissionsGranted(true);
       setShowPermissionModal(false);
+      setPermissionError(null);
     } catch (error) {
       console.error("権限の取得に失敗しました:", error);
-      // エラーが発生してもモーダルを閉じる（ユーザーが拒否した場合など）
-      setShowPermissionModal(false);
+
+      // カメラのみでも試してみる
+      try {
+        console.log("SimpleCameraPage: カメラのみで再試行");
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+        console.log("SimpleCameraPage: カメラ権限取得成功");
+        setPermissionsGranted(true);
+        setShowPermissionModal(false);
+        setPermissionError(
+          "マイクの権限が拒否されましたが、カメラは使用できます。"
+        );
+      } catch (cameraError) {
+        console.error("カメラ権限も失敗:", cameraError);
+        setPermissionError(
+          "カメラとマイクの権限が拒否されました。ブラウザの設定でカメラの許可を確認してください。"
+        );
+        setShowPermissionModal(false);
+      }
     }
   };
 
@@ -89,7 +111,27 @@ export default function SimpleCameraPage() {
           </div>
         </div>
       ) : (
-        <SimpleCamera />
+        <>
+          {permissionError && (
+            <div
+              style={{
+                position: "fixed",
+                top: "10px",
+                left: "10px",
+                right: "10px",
+                backgroundColor: "#ffebee",
+                color: "#c62828",
+                padding: "10px",
+                borderRadius: "5px",
+                fontSize: "14px",
+                zIndex: 1001,
+              }}
+            >
+              {permissionError}
+            </div>
+          )}
+          <SimpleCamera />
+        </>
       )}
     </div>
   );
