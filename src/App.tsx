@@ -1,5 +1,4 @@
 import {useEffect, useRef, useState} from "react";
-import {openDB} from "idb";
 import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import {CameraControls} from "./components/CameraControls";
 import {PreviewScreen} from "./components/PreviewScreen";
@@ -7,13 +6,11 @@ import {EffectSelector} from "./components/EffectSelector";
 import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
-import {LogoAnimation} from "./components/LogoAnimation";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
+import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 
 /* ---------- 定数 ---------- */
-const DB_NAME = "effects-db";
-const STORE = "effects";
-const EFFECTS = ["effect1", "effect2"]; // public/assets/effect?.png
+const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
 
 const BLEND_MODES = [
   {value: "source-over", label: "通常"},
@@ -233,21 +230,10 @@ function FullCameraApp() {
         await checkZoomSupport();
 
         /* -- b) エフェクト画像 -- */
-        const db = await openDB(DB_NAME, 1, {
-          upgrade(db) {
-            db.createObjectStore(STORE);
-          },
-        });
-        const imgs: ImageBitmap[] = [];
-
-        for (const key of EFFECTS) {
-          let blob = await db.get(STORE, key);
-          if (!blob) {
-            blob = await fetch(`/assets/${key}.png`).then((r) => r.blob());
-            await db.put(STORE, blob, key);
-          }
-          imgs.push(await createImageBitmap(blob));
-        }
+        console.log(
+          "FullCameraApp: スプライトシートからエフェクト読み込み中..."
+        );
+        const imgs = await loadEffectsFromSpriteSheet();
         setBitmaps(imgs);
         setReady(true);
       } catch (error) {
@@ -285,16 +271,17 @@ function FullCameraApp() {
             onTakePhoto={takePhoto}
             blendMode={blendMode}
             isSwitchingCamera={isSwitchingCamera}
+            isNoSignalDetected={isNoSignalDetected}
           />
 
           <AudioReceiver
             onEffectDetected={handleEffectDetected}
-            availableEffects={EFFECTS.length}
+            availableEffects={NUM_EFFECTS}
             onNoSignalDetected={handleNoSignalDetected}
           />
 
           {/* ロゴアニメーション - 信号が検出されていない時のみ表示 */}
-          <LogoAnimation isVisible={isNoSignalDetected} />
+          {/* <LogoAnimation isVisible={isNoSignalDetected} /> */}
 
           <div
             className="controls"
@@ -312,7 +299,10 @@ function FullCameraApp() {
             }}
           >
             <EffectSelector
-              effects={EFFECTS}
+              effects={Array.from(
+                {length: NUM_EFFECTS},
+                (_, i) => `effect${i + 1}`
+              )}
               current={current}
               onChange={setCurrent}
             />

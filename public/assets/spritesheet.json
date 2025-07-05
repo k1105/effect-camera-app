@@ -1,0 +1,73 @@
+{
+	"meta": {
+		"image": "spritesheet.png",
+		"size": {"w":5329,"h":3613},
+		"scale": "1"
+	},
+	"frames": {
+		"wow-01.png":
+		{
+			"frame": {"x":0,"y":0,"w":531,"h":3613},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":531,"h":3613},
+			"sourceSize": {"w":531,"h":3613}
+		},
+		"wow-03.png":
+		{
+			"frame": {"x":531,"y":0,"w":2120,"h":1285},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":2120,"h":1285},
+			"sourceSize": {"w":2120,"h":1285}
+		},
+		"wow-02.png":
+		{
+			"frame": {"x":531,"y":1285,"w":1966,"h":1473},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":1966,"h":1473},
+			"sourceSize": {"w":1966,"h":1473}
+		},
+		"wow-08.png":
+		{
+			"frame": {"x":2651,"y":0,"w":1335,"h":1653},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":1335,"h":1653},
+			"sourceSize": {"w":1335,"h":1653}
+		},
+		"wow-07.png":
+		{
+			"frame": {"x":3986,"y":0,"w":1343,"h":1187},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":1343,"h":1187},
+			"sourceSize": {"w":1343,"h":1187}
+		},
+		"wow-04.png":
+		{
+			"frame": {"x":3986,"y":1187,"w":1215,"h":1314},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":1215,"h":1314},
+			"sourceSize": {"w":1215,"h":1314}
+		},
+		"wow-05.png":
+		{
+			"frame": {"x":2651,"y":1653,"w":915,"h":1314},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":915,"h":1314},
+			"sourceSize": {"w":915,"h":1314}
+		},
+		"wow-06.png":
+		{
+			"frame": {"x":3986,"y":2501,"w":1262,"h":1097},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":1262,"h":1097},
+			"sourceSize": {"w":1262,"h":1097}
+		}
+	}
+}

@@ -1,4 +1,7 @@
-import {useEffect, useRef} from "react";
+import {useEffect, useRef, useState} from "react";
+import img0 from "../assets/dlt-logo-animation/img0.png";
+import img1 from "../assets/dlt-logo-animation/img1.png";
+import {getLayoutForEffect, calculatePositions} from "../utils/effectLayouts";
 
 type BlendMode =
   | "source-over"
@@ -17,6 +20,7 @@ interface CameraCanvasProps {
   onTakePhoto?: (canvas: HTMLCanvasElement) => void;
   blendMode?: BlendMode;
   isSwitchingCamera?: boolean;
+  isNoSignalDetected?: boolean; // 信号が検出されていない状態
 }
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
@@ -28,14 +32,70 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   onTakePhoto,
   blendMode = "source-over",
   isSwitchingCamera = false,
+  isNoSignalDetected = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [logoBitmaps, setLogoBitmaps] = useState<
+    [ImageBitmap, ImageBitmap] | null
+  >(null);
+  const currentFrameRef = useRef(0);
+
+  // ロゴ画像のプリロード
+  useEffect(() => {
+    const preloadLogoImages = async () => {
+      try {
+        const [bitmap0, bitmap1] = await Promise.all([
+          createImageBitmap(await fetch(img0).then((r) => r.blob())),
+          createImageBitmap(await fetch(img1).then((r) => r.blob())),
+        ]);
+        setLogoBitmaps([bitmap0, bitmap1]);
+      } catch (error) {
+        console.error("ロゴ画像の読み込みに失敗しました:", error);
+      }
+    };
+
+    preloadLogoImages();
+  }, []);
+
+  // ロゴアニメーションのフレーム計算
+  const getLogoFrameData = (frame: number) => {
+    const TOTAL_FRAMES = 120;
+    const normalizedFrame = frame % TOTAL_FRAMES;
+
+    if (normalizedFrame < 100) {
+      // img0.png (フレーム0-99)
+      const gridX = normalizedFrame % 10;
+      const gridY = Math.floor(normalizedFrame / 10);
+      return {
+        bitmap: logoBitmaps![0],
+        sourceX: gridX * 400, // 4000px / 10 = 400px per grid
+        sourceY: gridY * 400,
+        sourceWidth: 400,
+        sourceHeight: 400,
+      };
+    } else {
+      // img1.png (フレーム100-119)
+      const frameInImg1 = normalizedFrame - 100;
+      const gridX = frameInImg1 % 10;
+      const gridY = Math.floor(frameInImg1 / 10); // 0-1 (上から2段分のみ)
+      return {
+        bitmap: logoBitmaps![1],
+        sourceX: gridX * 400,
+        sourceY: gridY * 400,
+        sourceWidth: 400,
+        sourceHeight: 400,
+      };
+    }
+  };
 
   useEffect(() => {
     if (!ready || isPreviewMode) return;
 
     let raf = 0;
-    const draw = () => {
+    let lastTime = 0;
+    const FRAME_DURATION = 50; // 50ms per frame (20fps)
+
+    const draw = (currentTime: number) => {
       const cvs = canvasRef.current!;
       const ctx = cvs.getContext("2d")!;
       const vid = videoRef.current!;
@@ -83,34 +143,79 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       // カメラ切り替え中はエフェクトを表示しない
       if (!isSwitchingCamera && current >= 0) {
         // currentが-1の場合はエフェクトを表示しない
-        // エフェクト画像を合成モードを指定して描画
         const effect = bitmaps[current];
-        const effectAspect = effect.width / effect.height;
+        const layout = getLayoutForEffect(current);
+        const positions = calculatePositions(
+          layout,
+          targetWidth,
+          targetHeight,
+          currentTime
+        );
 
-        let effectWidth,
-          effectHeight,
-          effectX = 0,
-          effectY = 0;
+        // 各位置にエフェクトを描画
+        for (const pos of positions) {
+          const effectAspect = effect.width / effect.height;
+          let effectWidth, effectHeight;
 
-        if (effectAspect > targetAspect) {
-          // エフェクトが横長の場合
-          effectWidth = targetWidth;
-          effectHeight = effectWidth / effectAspect;
-          effectY = (targetHeight - effectHeight) / 2;
-        } else {
-          // エフェクトが縦長の場合
-          effectHeight = targetHeight;
-          effectWidth = effectHeight * effectAspect;
-          effectX = (targetWidth - effectWidth) / 2;
+          if (effectAspect > targetAspect) {
+            // エフェクトが横長の場合
+            effectWidth = targetWidth * pos.scale;
+            effectHeight = effectWidth / effectAspect;
+          } else {
+            // エフェクトが縦長の場合
+            effectHeight = targetHeight * pos.scale;
+            effectWidth = effectHeight * effectAspect;
+          }
+
+          // 回転とスケールを適用
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.rotate(pos.rotation);
+          ctx.globalCompositeOperation = blendMode;
+          ctx.drawImage(
+            effect,
+            -effectWidth / 2,
+            -effectHeight / 2,
+            effectWidth,
+            effectHeight
+          );
+          ctx.restore();
+        }
+      }
+
+      // ロゴアニメーションの描画（信号が検出されていない時）
+      if (isNoSignalDetected && logoBitmaps) {
+        // アニメーションフレームの更新
+        if (currentTime - lastTime >= FRAME_DURATION) {
+          currentFrameRef.current = (currentFrameRef.current + 1) % 120;
+          lastTime = currentTime;
         }
 
-        ctx.globalCompositeOperation = blendMode;
-        ctx.drawImage(effect, effectX, effectY, effectWidth, effectHeight);
+        const frameData = getLogoFrameData(currentFrameRef.current);
+
+        // ロゴを中央に配置（サイズは調整可能）
+        const logoSize = 300;
+        const logoX = (targetWidth - logoSize) / 2;
+        const logoY = (targetHeight - logoSize) / 2;
+
+        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(
+          frameData.bitmap,
+          frameData.sourceX,
+          frameData.sourceY,
+          frameData.sourceWidth,
+          frameData.sourceHeight,
+          logoX,
+          logoY,
+          logoSize,
+          logoSize
+        );
       }
 
       raf = requestAnimationFrame(draw);
     };
-    draw();
+
+    raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [
     ready,
@@ -120,6 +225,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     videoRef,
     blendMode,
     isSwitchingCamera,
+    isNoSignalDetected,
+    logoBitmaps,
   ]);
 
   return (

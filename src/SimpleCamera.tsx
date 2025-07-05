@@ -1,12 +1,10 @@
 import {useEffect, useRef, useState} from "react";
-import {openDB} from "idb";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
+import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 
 /* ---------- 定数 ---------- */
-const DB_NAME = "effects-db";
-const STORE = "effects";
-const EFFECTS = ["effect1", "effect2"]; // public/assets/effect?.png
+const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
 
 export default function SimpleCamera() {
   /* ---------- Refs & State ---------- */
@@ -50,22 +48,10 @@ export default function SimpleCamera() {
         console.log("SimpleCamera: カメラ初期化完了");
 
         /* -- b) エフェクト画像 -- */
-        console.log("SimpleCamera: エフェクト画像読み込み中...");
-        const db = await openDB(DB_NAME, 1, {
-          upgrade(db) {
-            db.createObjectStore(STORE);
-          },
-        });
-        const imgs: ImageBitmap[] = [];
-
-        for (const key of EFFECTS) {
-          let blob = await db.get(STORE, key);
-          if (!blob) {
-            blob = await fetch(`/assets/${key}.png`).then((r) => r.blob());
-            await db.put(STORE, blob, key);
-          }
-          imgs.push(await createImageBitmap(blob));
-        }
+        console.log(
+          "SimpleCamera: スプライトシートからエフェクト読み込み中..."
+        );
+        const imgs = await loadEffectsFromSpriteSheet();
         setBitmaps(imgs);
         setReady(true);
         console.log("SimpleCamera: エフェクト画像読み込み完了");
@@ -110,7 +96,7 @@ export default function SimpleCamera() {
           console.log(`SimpleCamera: エフェクト ${effectId} に切り替え`);
           setCurrent(effectId);
         }}
-        availableEffects={EFFECTS.length}
+        availableEffects={NUM_EFFECTS}
       />
     </div>
   );
