@@ -138,11 +138,51 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
   const mobileProgramRef = useRef<WebGLProgram | null>(null);
+
+  // メモリリーク防止用のリソース管理
+  const videoTextureRef = useRef<WebGLTexture | null>(null);
+  const effectTextureRef = useRef<WebGLTexture | null>(null);
+  const logoTextureRef = useRef<WebGLTexture | null>(null);
+  const quadBufferRef = useRef<WebGLBuffer | null>(null);
+  const createdTexturesRef = useRef<Set<WebGLTexture>>(new Set());
+  const createdBuffersRef = useRef<Set<WebGLBuffer>>(new Set());
+
   const [aspLogoBitmap, setAspLogoBitmap] = useState<ImageBitmap | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+
+  // メモリリーク防止用のクリーンアップ関数
+  const cleanupWebGLResources = () => {
+    const gl = glRef.current;
+    if (!gl) return;
+
+    // テクスチャの削除
+    createdTexturesRef.current.forEach((texture) => {
+      gl.deleteTexture(texture);
+    });
+    createdTexturesRef.current.clear();
+
+    // バッファの削除
+    createdBuffersRef.current.forEach((buffer) => {
+      gl.deleteBuffer(buffer);
+    });
+    createdBuffersRef.current.clear();
+
+    // 参照をクリア
+    videoTextureRef.current = null;
+    effectTextureRef.current = null;
+    logoTextureRef.current = null;
+    quadBufferRef.current = null;
+  };
+
+  // コンポーネントのアンマウント時にクリーンアップ
+  useEffect(() => {
+    return () => {
+      cleanupWebGLResources();
+    };
+  }, []);
 
   // モバイルデバイス検出
   useEffect(() => {
@@ -279,6 +319,17 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+      // 四角形用のバッファを作成（再利用）
+      const positions = new Float32Array([
+        -1, -1, 0, 1, 1, -1, 1, 1, -1, 1, 0, 0, 1, 1, 1, 0,
+      ]);
+      quadBufferRef.current = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBufferRef.current);
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+      if (quadBufferRef.current) {
+        createdBuffersRef.current.add(quadBufferRef.current);
+      }
+
       console.log("WebGL initialized successfully");
       return true;
     } catch (error) {
@@ -336,6 +387,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     image: HTMLVideoElement | ImageBitmap
   ) => {
     const texture = gl.createTexture();
+    if (!texture) return null;
+
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
     // モバイルデバイス用の最適化
@@ -347,10 +400,13 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     // テクスチャデータの設定
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
+    // 作成したテクスチャを追跡
+    createdTexturesRef.current.add(texture);
+
     return texture;
   };
 
-  // 四角形の描画
+  // 四角形の描画（バッファ再利用版）
   const drawQuad = (
     gl: WebGLRenderingContext,
     program: WebGLProgram,
@@ -360,14 +416,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   ) => {
     gl.useProgram(program);
 
-    // 頂点データ
-    const positions = new Float32Array([
-      -1, -1, 0, 1, 1, -1, 1, 1, -1, 1, 0, 0, 1, 1, 1, 0,
-    ]);
-
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+    // 再利用可能なバッファを使用
+    if (quadBufferRef.current) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBufferRef.current);
+    }
 
     const positionLocation = gl.getAttribLocation(program, "a_position");
     const texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
@@ -492,8 +544,21 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.clearColor(0, 0, 0, 1);
           gl.clear(gl.COLOR_BUFFER_BIT);
 
-          // カメラ映像のテクスチャを作成
-          const videoTexture = createTexture(gl, vid);
+          // カメラ映像のテクスチャを作成（再利用）
+          if (!videoTextureRef.current) {
+            videoTextureRef.current = createTexture(gl, vid);
+          } else {
+            // 既存のテクスチャを更新
+            gl.bindTexture(gl.TEXTURE_2D, videoTextureRef.current);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,
+              gl.RGBA,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              vid
+            );
+          }
 
           // モバイルシェーダーでカメラ映像を描画
           gl.useProgram(mobileProgram);
@@ -524,7 +589,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.uniform1f(tintLocation, mobileConfig.tint);
 
           const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-          drawQuad(gl, mobileProgram, identity, videoTexture);
+          if (videoTextureRef.current) {
+            drawQuad(gl, mobileProgram, identity, videoTextureRef.current);
+          }
 
           raf = requestAnimationFrame(mobileDraw);
         } catch (error) {
@@ -534,7 +601,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       };
 
       raf = requestAnimationFrame(mobileDraw);
-      return () => cancelAnimationFrame(raf);
+      return () => {
+        cancelAnimationFrame(raf);
+        cleanupWebGLResources();
+      };
     }
 
     const draw = (currentTime: number) => {
@@ -556,8 +626,21 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        // カメラ映像のテクスチャを作成
-        const videoTexture = createTexture(gl, vid);
+        // カメラ映像のテクスチャを作成（再利用）
+        if (!videoTextureRef.current) {
+          videoTextureRef.current = createTexture(gl, vid);
+        } else {
+          // 既存のテクスチャを更新
+          gl.bindTexture(gl.TEXTURE_2D, videoTextureRef.current);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            vid
+          );
+        }
 
         // エフェクトの描画
         const effectRenderData = calculateEffectRenderData({
@@ -574,10 +657,24 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           effectRenderData.effectBitmap &&
           effectRenderData.positions.length > 0
         ) {
-          const effectTexture = createTexture(
-            gl,
-            effectRenderData.effectBitmap
-          );
+          // エフェクトテクスチャを作成（再利用）
+          if (!effectTextureRef.current) {
+            effectTextureRef.current = createTexture(
+              gl,
+              effectRenderData.effectBitmap
+            );
+          } else {
+            // 既存のテクスチャを更新
+            gl.bindTexture(gl.TEXTURE_2D, effectTextureRef.current);
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,
+              gl.RGBA,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              effectRenderData.effectBitmap
+            );
+          }
 
           for (const pos of effectRenderData.positions) {
             const {transform} = calculateEffectTransform(
@@ -603,10 +700,12 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
               "u_background"
             );
             gl.activeTexture(gl.TEXTURE1);
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.bindTexture(gl.TEXTURE_2D, videoTextureRef.current);
             gl.uniform1i(backgroundLocation, 1);
 
-            drawQuad(gl, blendProgram, transform, effectTexture);
+            if (effectTextureRef.current) {
+              drawQuad(gl, blendProgram, transform, effectTextureRef.current);
+            }
           }
         }
 
@@ -672,7 +771,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             badTVConfig.interlaceLineWidth
           );
 
-          drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
+          if (videoTextureRef.current) {
+            drawQuad(
+              gl,
+              badTVProgramRef.current!,
+              identity,
+              videoTextureRef.current
+            );
+          }
         } else if (effectRenderData.effectType === "psychedelic") {
           // サイケデリックシェーダーでカメラ映像を描画
           gl.useProgram(psychedelicProgramRef.current!);
@@ -722,15 +828,28 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
           gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
 
-          drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
+          if (videoTextureRef.current) {
+            drawQuad(
+              gl,
+              psychedelicProgramRef.current!,
+              identity,
+              videoTextureRef.current
+            );
+          }
         } else {
           // 通常のシェーダーでカメラ映像を描画
-          drawQuad(gl, program, identity, videoTexture);
+          if (videoTextureRef.current) {
+            drawQuad(gl, program, identity, videoTextureRef.current);
+          }
         }
 
         // ロゴの描画
         if (isNoSignalDetected && aspLogoBitmap) {
-          const logoTexture = createTexture(gl, aspLogoBitmap);
+          // ロゴテクスチャを作成（再利用）
+          if (!logoTextureRef.current) {
+            logoTextureRef.current = createTexture(gl, aspLogoBitmap);
+          }
+
           const logoSize = 300; // 固定サイズ
           const logoX = (targetWidth - logoSize) / 2;
           const logoY = (targetHeight - logoSize) / 2;
@@ -752,7 +871,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             1,
           ];
 
-          drawQuad(gl, program, logoTransform, logoTexture);
+          if (logoTextureRef.current) {
+            drawQuad(gl, program, logoTransform, logoTextureRef.current);
+          }
         }
 
         raf = requestAnimationFrame(draw);
@@ -764,7 +885,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     };
 
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      cleanupWebGLResources();
+    };
   }, [
     ready,
     current,
