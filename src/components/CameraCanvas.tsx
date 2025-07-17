@@ -13,6 +13,8 @@ import {
   psychedelicFragmentShader,
 } from "../utils/psychedelicShader";
 import {getPsychedelicConfigForEffect} from "../utils/psychedelicConfig";
+import {mobileVertexShader, mobileFragmentShader} from "../utils/mobileShader";
+import {getMobileConfigForEffect} from "../utils/mobileConfig";
 import {shouldDisableShaders} from "../utils/deviceDetection";
 
 interface CameraCanvasProps {
@@ -135,6 +137,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const blendProgramRef = useRef<WebGLProgram | null>(null);
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
+  const mobileProgramRef = useRef<WebGLProgram | null>(null);
   const [aspLogoBitmap, setAspLogoBitmap] = useState<ImageBitmap | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
@@ -212,6 +215,16 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         gl.FRAGMENT_SHADER,
         psychedelicFragmentShader
       );
+      const mobileVertexShaderObj = createShader(
+        gl,
+        gl.VERTEX_SHADER,
+        mobileVertexShader
+      );
+      const mobileFragmentShaderObj = createShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        mobileFragmentShader
+      );
 
       if (
         !vertexShader ||
@@ -220,7 +233,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         !badTVVertexShaderObj ||
         !badTVFragmentShaderObj ||
         !psychedelicVertexShaderObj ||
-        !psychedelicFragmentShaderObj
+        !psychedelicFragmentShaderObj ||
+        !mobileVertexShaderObj ||
+        !mobileFragmentShaderObj
       ) {
         console.error("Shader creation failed");
         return false;
@@ -243,12 +258,18 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         psychedelicVertexShaderObj,
         psychedelicFragmentShaderObj
       );
+      mobileProgramRef.current = createProgram(
+        gl,
+        mobileVertexShaderObj,
+        mobileFragmentShaderObj
+      );
 
       if (
         !programRef.current ||
         !blendProgramRef.current ||
         !badTVProgramRef.current ||
-        !psychedelicProgramRef.current
+        !psychedelicProgramRef.current ||
+        !mobileProgramRef.current
       ) {
         console.error("Program creation failed");
         return false;
@@ -418,10 +439,66 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
     const canvas = canvasRef.current!;
 
-    // モバイルデバイスの場合はシェーダーを無効化
+    // モバイルデバイスの場合は軽量シェーダーを使用
     if (isMobile) {
-      console.log("Mobile device detected - shaders disabled");
-      return;
+      console.log("Mobile device detected - using lightweight shader");
+
+      // モバイル用の軽量描画ループ
+      const mobileDraw = (currentTime: number) => {
+        try {
+          const vid = videoRef.current!;
+          if (!vid.videoWidth || !vid.videoHeight) {
+            raf = requestAnimationFrame(mobileDraw);
+            return;
+          }
+
+          // 背景をクリア
+          gl.clearColor(0, 0, 0, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+
+          // カメラ映像のテクスチャを作成
+          const videoTexture = createTexture(gl, vid);
+
+          // モバイルシェーダーでカメラ映像を描画
+          gl.useProgram(mobileProgram);
+
+          // エフェクトIDに基づいてモバイル設定を取得
+          const mobileConfig = getMobileConfigForEffect(current);
+
+          // モバイルシェーダーのユニフォームを設定
+          const timeLocation = gl.getUniformLocation(mobileProgram, "u_time");
+          const brightnessLocation = gl.getUniformLocation(
+            mobileProgram,
+            "u_brightness"
+          );
+          const contrastLocation = gl.getUniformLocation(
+            mobileProgram,
+            "u_contrast"
+          );
+          const saturationLocation = gl.getUniformLocation(
+            mobileProgram,
+            "u_saturation"
+          );
+          const tintLocation = gl.getUniformLocation(mobileProgram, "u_tint");
+
+          gl.uniform1f(timeLocation, currentTime * 0.001);
+          gl.uniform1f(brightnessLocation, mobileConfig.brightness);
+          gl.uniform1f(contrastLocation, mobileConfig.contrast);
+          gl.uniform1f(saturationLocation, mobileConfig.saturation);
+          gl.uniform1f(tintLocation, mobileConfig.tint);
+
+          const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+          drawQuad(gl, mobileProgram, identity, videoTexture);
+
+          raf = requestAnimationFrame(mobileDraw);
+        } catch (error) {
+          console.error("Mobile WebGL rendering error:", error);
+          raf = requestAnimationFrame(mobileDraw);
+        }
+      };
+
+      raf = requestAnimationFrame(mobileDraw);
+      return () => cancelAnimationFrame(raf);
     }
 
     // WebGL初期化
@@ -434,13 +511,15 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     const blendProgram = blendProgramRef.current!;
     const badTVProgram = badTVProgramRef.current!;
     const psychedelicProgram = psychedelicProgramRef.current!;
+    const mobileProgram = mobileProgramRef.current!;
 
     if (
       !gl ||
       !program ||
       !blendProgram ||
       !badTVProgram ||
-      !psychedelicProgram
+      !psychedelicProgram ||
+      !mobileProgram
     ) {
       console.error("WebGL initialization failed");
       return;
@@ -700,35 +779,17 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   return (
     <>
-      {/* モバイルデバイスの場合はカメラ映像のみ表示 */}
-      {isMobile ? (
-        <video
-          ref={videoRef}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
-          autoPlay
-          playsInline
-          muted
-        />
-      ) : (
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-          }}
-        />
-      )}
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+        }}
+      />
 
       {/* 黒いオーバーレイレイヤー */}
       <div
