@@ -37,17 +37,17 @@ export const EFFECT_LAYOUTS: EffectLayout[] = [
     config: {
       type: "spiral",
       count: 30,
-      radius: 1000,
+      radius: 800, // WebGL用に調整された半径
       animated: true,
       rotation: Math.PI * 10.5,
-      sizeRatio: 0.05,
+      sizeRatio: 0.1, // WebGL用に調整されたサイズ比
     },
   }, // 螺旋配置（アニメーション付き）
   {
     id: 2,
     config: {type: "random", count: 8, animated: true, speed: 1, maxScale: 0.5},
   }, // ランダム配置
-  {id: 3, config: {type: "wave", count: 6, speed: 0.1, amplitude: 1000}}, // 波状配置
+  {id: 3, config: {type: "wave", count: 6, speed: 0.1, amplitude: 600}}, // 波状配置（WebGL用に調整）
   {
     id: 4,
     config: {
@@ -70,7 +70,7 @@ export const EFFECT_LAYOUTS: EffectLayout[] = [
       speed: 0.3,
     },
   }, // 螺旋配置
-  {id: 6, config: {type: "circle", radius: 300, count: 3}}, // 大きな円形
+  {id: 6, config: {type: "circle", radius: 200, count: 3}}, // 大きな円形（WebGL用に調整）
   {
     id: 7,
     config: {
@@ -83,7 +83,8 @@ export const EFFECT_LAYOUTS: EffectLayout[] = [
   }, // 多数ランダム
 ];
 
-// 配置計算関数
+// 配置計算関数（WebGL座標系対応）
+// 戻り値の座標はピクセル座標系、スケールはWebGL用に正規化
 export function calculatePositions(
   layout: LayoutConfig,
   canvasWidth: number,
@@ -120,7 +121,7 @@ export function calculatePositions(
         positions.push({
           x,
           y,
-          scale: 0.6,
+          scale: 0.3, // WebGL用に調整されたスケール
           rotation: angle,
         });
       }
@@ -181,7 +182,7 @@ export function calculatePositions(
             canvasHeight * 0.9,
             attempts * 0.2
           );
-          scale = seededRandom(0.4, maxScale, attempts * 0.3);
+          scale = seededRandom(0.2, maxScale * 0.5, attempts * 0.3); // WebGL用に調整されたスケール範囲
 
           // 既存の要素との距離をチェック
           validPosition = true;
@@ -228,7 +229,7 @@ export function calculatePositions(
         positions.push({
           x,
           y,
-          scale: 0.5 + Math.sin(progress * Math.PI * 2) * 0.2,
+          scale: 0.2 + Math.sin(progress * Math.PI * 2) * 0.1, // WebGL用に調整されたスケール
           rotation: progress * Math.PI * 2,
         });
       }
@@ -274,10 +275,11 @@ export function calculatePositions(
         const x = col * cellWidth + cellWidth / 2;
         const y = row * cellHeight + cellHeight / 2;
 
-        // アスペクト比を保持したスケール計算
+        // WebGL用のスケール計算
         // セルの幅と高さの小さい方に合わせてスケールを決定
         const cellSize = Math.min(cellWidth, cellHeight);
-        const scale = (cellSize * cellScale) / 200; // 200pxを基準としたスケール計算
+        const scale =
+          ((cellSize * cellScale) / Math.min(canvasWidth, canvasHeight)) * 2; // WebGL用の正規化スケール
 
         positions.push({
           x,

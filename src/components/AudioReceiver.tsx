@@ -126,9 +126,9 @@ export function AudioReceiver({
 
       // 音声レベルが一定以上の場合のみログを出力（デバッグ用）
       if (overallMaxIntensity > 0.01) {
-        console.log(
-          `AudioReceiver: 全体的な音声レベル: ${overallMaxIntensity.toFixed(3)}`
-        );
+        // console.log(
+        //   `AudioReceiver: 全体的な音声レベル: ${overallMaxIntensity.toFixed(3)}`
+        // );
       }
 
       // 各チャンネルの強度をチェック
