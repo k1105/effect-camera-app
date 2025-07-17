@@ -78,7 +78,13 @@ export default function SimpleCamera() {
         backgroundColor: "#000",
       }}
     >
-      <video ref={videoRef} style={{display: "none"}} playsInline muted />
+      <video
+        ref={videoRef}
+        style={{display: "none"}}
+        playsInline
+        muted
+        autoPlay
+      />
 
       <CameraCanvas
         videoRef={videoRef}

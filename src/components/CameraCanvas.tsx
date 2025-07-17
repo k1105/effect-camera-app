@@ -700,31 +700,22 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   return (
     <>
-      {/* モバイルデバイスの場合はシンプルな表示 */}
+      {/* モバイルデバイスの場合はカメラ映像のみ表示 */}
       {isMobile ? (
-        <div
+        <video
+          ref={videoRef}
           style={{
             position: "fixed",
             top: 0,
             left: 0,
             width: "100%",
             height: "100%",
-            backgroundColor: "black",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "24px",
-            textAlign: "center",
+            objectFit: "cover",
           }}
-        >
-          <div>
-            <div style={{marginBottom: "20px"}}>📱 Mobile Device Detected</div>
-            <div style={{fontSize: "18px", opacity: 0.8}}>
-              Shaders disabled for performance
-            </div>
-          </div>
-        </div>
+          autoPlay
+          playsInline
+          muted
+        />
       ) : (
         <canvas
           ref={canvasRef}

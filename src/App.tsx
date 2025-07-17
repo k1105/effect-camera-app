@@ -245,7 +245,13 @@ function FullCameraApp() {
   /* ---------- UI ---------- */
   return (
     <>
-      <video ref={videoRef} style={{display: "none"}} playsInline muted />
+      <video
+        ref={videoRef}
+        style={{display: "none"}}
+        playsInline
+        muted
+        autoPlay
+      />
 
       {isPreviewMode && previewImage ? (
         <PreviewScreen
