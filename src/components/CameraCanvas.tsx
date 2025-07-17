@@ -2,20 +2,19 @@ import {useEffect, useRef, useState} from "react";
 import aspLogo from "../assets/asp-logo.png";
 import {
   calculateEffectRenderData,
-  // calculateEffectTransform,
-  // getBlendModeValue,
   type BlendMode,
 } from "../utils/effectRenderer";
-import {badTVVertexShader, badTVFragmentShader} from "../utils/badTVShader";
 import {getBadTVConfigForEffect} from "../utils/badTVConfig";
-import {
-  psychedelicVertexShader,
-  psychedelicFragmentShader,
-} from "../utils/psychedelicShader";
 import {getPsychedelicConfigForEffect} from "../utils/psychedelicConfig";
-import {mobileVertexShader, mobileFragmentShader} from "../utils/mobileShader";
 import {getMobileConfigForEffect} from "../utils/mobileConfig";
 import {shouldDisableShaders} from "../utils/deviceDetection";
+import {createTexture, drawQuad} from "../utils/webglUtils";
+import {initWebGL} from "../utils/webGLInitializer";
+import {
+  getEffectName,
+  getBackgroundColorForEffect,
+  getEffectOverlayColor,
+} from "../utils/effectUtils";
 
 interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -27,149 +26,6 @@ interface CameraCanvasProps {
   isSwitchingCamera?: boolean;
   isNoSignalDetected?: boolean;
 }
-
-// WebGLシェーダーソース
-const vertexShaderSource = `
-  attribute vec2 a_position;
-  attribute vec2 a_texCoord;
-  
-  uniform mat3 u_transform;
-  
-  varying vec2 v_texCoord;
-  
-  void main() {
-    vec2 position = (u_transform * vec3(a_position, 1.0)).xy;
-    gl_Position = vec4(position, 0.0, 1.0);
-    v_texCoord = a_texCoord;
-  }
-`;
-
-const fragmentShaderSource = `
-  precision mediump float;
-  
-  uniform sampler2D u_texture;
-  uniform float u_alpha;
-  
-  varying vec2 v_texCoord;
-  
-  void main() {
-    vec4 color = texture2D(u_texture, v_texCoord);
-    gl_FragColor = vec4(color.rgb, color.a * u_alpha);
-  }
-`;
-
-// ブレンドモード用フラグメントシェーダー
-const blendFragmentShaderSource = `
-  precision mediump float;
-  
-  uniform sampler2D u_texture;
-  uniform sampler2D u_background;
-  uniform float u_alpha;
-  uniform int u_blendMode;
-  
-  varying vec2 v_texCoord;
-  
-  vec3 blend(vec3 base, vec3 blend, int mode) {
-    if (mode == 0) return blend; // source-over
-    if (mode == 1) return base * blend; // multiply
-    if (mode == 2) return 1.0 - (1.0 - base) * (1.0 - blend); // screen
-    if (mode == 3) { // overlay
-      return vec3(
-        base.r < 0.5 ? 2.0 * base.r * blend.r : 1.0 - 2.0 * (1.0 - base.r) * (1.0 - blend.r),
-        base.g < 0.5 ? 2.0 * base.g * blend.g : 1.0 - 2.0 * (1.0 - base.g) * (1.0 - blend.g),
-        base.b < 0.5 ? 2.0 * base.b * blend.b : 1.0 - 2.0 * (1.0 - base.b) * (1.0 - blend.b)
-      );
-    }
-    if (mode == 4) { // soft-light
-      return vec3(
-        blend.r < 0.5 ? 2.0 * base.r * blend.r + base.r * base.r * (1.0 - 2.0 * blend.r) : sqrt(base.r) * (2.0 * blend.r - 1.0) + 2.0 * base.r * (1.0 - blend.r),
-        blend.g < 0.5 ? 2.0 * base.g * blend.g + base.g * base.g * (1.0 - 2.0 * blend.g) : sqrt(base.g) * (2.0 * blend.g - 1.0) + 2.0 * base.g * (1.0 - blend.g),
-        blend.b < 0.5 ? 2.0 * base.b * blend.b + base.b * base.b * (1.0 - 2.0 * blend.b) : sqrt(base.b) * (2.0 * blend.b - 1.0) + 2.0 * base.b * (1.0 - blend.b)
-      );
-    }
-    if (mode == 5) { // hard-light
-      return vec3(
-        blend.r < 0.5 ? 2.0 * base.r * blend.r : 1.0 - 2.0 * (1.0 - base.r) * (1.0 - blend.r),
-        blend.g < 0.5 ? 2.0 * base.g * blend.g : 1.0 - 2.0 * (1.0 - base.g) * (1.0 - blend.g),
-        blend.b < 0.5 ? 2.0 * base.b * blend.b : 1.0 - 2.0 * (1.0 - base.b) * (1.0 - blend.b)
-      );
-    }
-    return blend;
-  }
-  
-  void main() {
-    vec4 textureColor = texture2D(u_texture, v_texCoord);
-    vec4 bgColor = texture2D(u_background, v_texCoord);
-    
-    vec3 blended = blend(bgColor.rgb, textureColor.rgb, u_blendMode);
-    gl_FragColor = vec4(blended, textureColor.a * u_alpha);
-  }
-`;
-
-// エフェクト名の取得
-const getEffectName = (effectId: number): string => {
-  const effectNames = [
-    "Bad TV - Subtle",
-    "Bad TV - Moderate",
-    "Bad TV - Heavy",
-    "Bad TV - Extreme",
-    "Psychedelic - Subtle",
-    "Psychedelic - Moderate",
-    "Psychedelic - Intense",
-    "Psychedelic - Extreme",
-  ];
-  return effectNames[effectId] || `Effect ${effectId}`;
-};
-
-// エフェクトに応じた背景色の取得
-const getBackgroundColorForEffect = (
-  effectId: number
-): [number, number, number, number] => {
-  switch (effectId) {
-    case 0: // Bad TV - Subtle
-      return [0.1, 0.1, 0.1, 1.0]; // 暗いグレー
-    case 1: // Bad TV - Moderate
-      return [0.05, 0.05, 0.05, 1.0]; // より暗いグレー
-    case 2: // Bad TV - Heavy
-      return [0.02, 0.02, 0.02, 1.0]; // 非常に暗いグレー
-    case 3: // Bad TV - Extreme
-      return [0.0, 0.0, 0.0, 1.0]; // 完全な黒
-    case 4: // Psychedelic - Subtle
-      return [0.1, 0.05, 0.15, 1.0]; // 暗い紫
-    case 5: // Psychedelic - Moderate
-      return [0.15, 0.05, 0.2, 1.0]; // 紫
-    case 6: // Psychedelic - Intense
-      return [0.2, 0.05, 0.25, 1.0]; // 明るい紫
-    case 7: // Psychedelic - Extreme
-      return [0.25, 0.05, 0.3, 1.0]; // 非常に明るい紫
-    default:
-      return [0.0, 0.0, 0.0, 1.0]; // デフォルトは黒
-  }
-};
-
-// エフェクトに応じたオーバーレイ色の取得
-const getEffectOverlayColor = (effectId: number): string => {
-  switch (effectId) {
-    case 0: // Bad TV - Subtle
-      return "rgba(20, 20, 20, 0.3)"; // 暗いグレー
-    case 1: // Bad TV - Moderate
-      return "rgba(10, 10, 10, 0.5)"; // より暗いグレー
-    case 2: // Bad TV - Heavy
-      return "rgba(5, 5, 5, 0.7)"; // 非常に暗いグレー
-    case 3: // Bad TV - Extreme
-      return "rgba(0, 0, 0, 0.9)"; // 完全な黒
-    case 4: // Psychedelic - Subtle
-      return "rgba(40, 10, 60, 0.3)"; // 暗い紫
-    case 5: // Psychedelic - Moderate
-      return "rgba(60, 15, 90, 0.4)"; // 紫
-    case 6: // Psychedelic - Intense
-      return "rgba(80, 20, 120, 0.5)"; // 明るい紫
-    case 7: // Psychedelic - Extreme
-      return "rgba(100, 25, 150, 0.6)"; // 非常に明るい紫
-    default:
-      return "rgba(0, 0, 0, 0.8)"; // デフォルトは黒
-  }
-};
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   videoRef,
@@ -216,118 +72,22 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   }, [current, ready, isPreviewMode]);
 
   // WebGL初期化
-  const initWebGL = () => {
+  const initializeWebGL = () => {
     try {
       const canvas = canvasRef.current!;
-      const gl = (canvas.getContext("webgl") ||
-        canvas.getContext("experimental-webgl")) as WebGLRenderingContext;
+      const result = initWebGL(canvas);
 
-      if (!gl) {
-        console.error("WebGL not supported");
+      if (!result.gl || !result.programs.program) {
+        console.error("WebGL initialization failed");
         return false;
       }
 
-      glRef.current = gl;
-
-      // シェーダーの作成
-      const vertexShader = createShader(
-        gl,
-        gl.VERTEX_SHADER,
-        vertexShaderSource
-      );
-      const fragmentShader = createShader(
-        gl,
-        gl.FRAGMENT_SHADER,
-        fragmentShaderSource
-      );
-      const blendFragmentShader = createShader(
-        gl,
-        gl.FRAGMENT_SHADER,
-        blendFragmentShaderSource
-      );
-      const badTVVertexShaderObj = createShader(
-        gl,
-        gl.VERTEX_SHADER,
-        badTVVertexShader
-      );
-      const badTVFragmentShaderObj = createShader(
-        gl,
-        gl.FRAGMENT_SHADER,
-        badTVFragmentShader
-      );
-      const psychedelicVertexShaderObj = createShader(
-        gl,
-        gl.VERTEX_SHADER,
-        psychedelicVertexShader
-      );
-      const psychedelicFragmentShaderObj = createShader(
-        gl,
-        gl.FRAGMENT_SHADER,
-        psychedelicFragmentShader
-      );
-      const mobileVertexShaderObj = createShader(
-        gl,
-        gl.VERTEX_SHADER,
-        mobileVertexShader
-      );
-      const mobileFragmentShaderObj = createShader(
-        gl,
-        gl.FRAGMENT_SHADER,
-        mobileFragmentShader
-      );
-
-      if (
-        !vertexShader ||
-        !fragmentShader ||
-        !blendFragmentShader ||
-        !badTVVertexShaderObj ||
-        !badTVFragmentShaderObj ||
-        !psychedelicVertexShaderObj ||
-        !psychedelicFragmentShaderObj ||
-        !mobileVertexShaderObj ||
-        !mobileFragmentShaderObj
-      ) {
-        console.error("Shader creation failed");
-        return false;
-      }
-
-      // プログラムの作成
-      programRef.current = createProgram(gl, vertexShader, fragmentShader);
-      blendProgramRef.current = createProgram(
-        gl,
-        vertexShader,
-        blendFragmentShader
-      );
-      badTVProgramRef.current = createProgram(
-        gl,
-        badTVVertexShaderObj,
-        badTVFragmentShaderObj
-      );
-      psychedelicProgramRef.current = createProgram(
-        gl,
-        psychedelicVertexShaderObj,
-        psychedelicFragmentShaderObj
-      );
-      mobileProgramRef.current = createProgram(
-        gl,
-        mobileVertexShaderObj,
-        mobileFragmentShaderObj
-      );
-
-      if (
-        !programRef.current ||
-        !blendProgramRef.current ||
-        !badTVProgramRef.current ||
-        !psychedelicProgramRef.current ||
-        !mobileProgramRef.current
-      ) {
-        console.error("Program creation failed");
-        return false;
-      }
-
-      // ブレンドモードの設定
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      glRef.current = result.gl;
+      programRef.current = result.programs.program;
+      blendProgramRef.current = result.programs.blendProgram;
+      badTVProgramRef.current = result.programs.badTVProgram;
+      psychedelicProgramRef.current = result.programs.psychedelicProgram;
+      mobileProgramRef.current = result.programs.mobileProgram;
 
       console.log("WebGL initialized successfully");
       return true;
@@ -335,112 +95,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       console.error("WebGL initialization error:", error);
       return false;
     }
-  };
-
-  // シェーダーの作成
-  const createShader = (
-    gl: WebGLRenderingContext,
-    type: number,
-    source: string
-  ) => {
-    const shader = gl.createShader(type);
-    if (!shader) return null;
-
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.error("Shader compilation error:", gl.getShaderInfoLog(shader));
-      gl.deleteShader(shader);
-      return null;
-    }
-
-    return shader;
-  };
-
-  // プログラムの作成
-  const createProgram = (
-    gl: WebGLRenderingContext,
-    vertexShader: WebGLShader,
-    fragmentShader: WebGLShader
-  ) => {
-    const program = gl.createProgram();
-    if (!program) return null;
-
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error("Program linking error:", gl.getProgramInfoLog(program));
-      gl.deleteProgram(program);
-      return null;
-    }
-
-    return program;
-  };
-
-  // テクスチャの作成（メモリ最適化版）
-  const createTexture = (
-    gl: WebGLRenderingContext,
-    image: HTMLVideoElement | ImageBitmap
-  ) => {
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    // モバイルデバイス用の最適化
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    // テクスチャデータの設定
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-    return texture;
-  };
-
-  // 四角形の描画
-  const drawQuad = (
-    gl: WebGLRenderingContext,
-    program: WebGLProgram,
-    transform: number[],
-    texture: WebGLTexture,
-    alpha: number = 1.0
-  ) => {
-    gl.useProgram(program);
-
-    // 頂点データ
-    const positions = new Float32Array([
-      -1, -1, 0, 1, 1, -1, 1, 1, -1, 1, 0, 0, 1, 1, 1, 0,
-    ]);
-
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-
-    const positionLocation = gl.getAttribLocation(program, "a_position");
-    const texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
-
-    gl.enableVertexAttribArray(positionLocation);
-    gl.enableVertexAttribArray(texCoordLocation);
-
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
-    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 16, 8);
-
-    // ユニフォームの設定
-    const transformLocation = gl.getUniformLocation(program, "u_transform");
-    gl.uniformMatrix3fv(transformLocation, false, new Float32Array(transform));
-
-    const textureLocation = gl.getUniformLocation(program, "u_texture");
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(textureLocation, 0);
-
-    const alphaLocation = gl.getUniformLocation(program, "u_alpha");
-    gl.uniform1f(alphaLocation, alpha);
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
 
   // ロゴ画像のプリロード
@@ -491,7 +145,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
     // WebGL初期化
     if (!glRef.current) {
-      if (!initWebGL()) return;
+      if (!initializeWebGL()) return;
     }
 
     const gl = glRef.current!;
@@ -549,7 +203,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.clear(gl.COLOR_BUFFER_BIT);
 
           // カメラ映像のテクスチャを作成
-          const videoTexture = createTexture(gl, vid);
+          let videoTexture: WebGLTexture;
+          try {
+            videoTexture = createTexture(gl, vid);
+          } catch (error) {
+            console.error("Failed to create video texture:", error);
+            raf = requestAnimationFrame(mobileDraw);
+            return;
+          }
 
           // モバイルシェーダーでカメラ映像を描画
           gl.useProgram(mobileProgram);
@@ -622,7 +283,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         // カメラ映像のテクスチャを作成
-        const videoTexture = createTexture(gl, vid);
+        let videoTexture: WebGLTexture;
+        try {
+          videoTexture = createTexture(gl, vid);
+        } catch (error) {
+          console.error("Failed to create video texture:", error);
+          raf = requestAnimationFrame(draw);
+          return;
+        }
 
         // エフェクトの描画データを取得
         const effectRenderData = calculateEffectRenderData({
@@ -801,7 +469,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
         // ロゴの描画
         if (isNoSignalDetected && aspLogoBitmap) {
-          const logoTexture = createTexture(gl, aspLogoBitmap);
+          let logoTexture: WebGLTexture;
+          try {
+            logoTexture = createTexture(gl, aspLogoBitmap);
+          } catch (error) {
+            console.error("Failed to create logo texture:", error);
+            raf = requestAnimationFrame(draw);
+            return;
+          }
           const logoSize = 300; // 固定サイズ
           const logoX = (targetWidth - logoSize) / 2;
           const logoY = (targetHeight - logoSize) / 2;
