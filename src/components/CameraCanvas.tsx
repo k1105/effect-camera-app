@@ -147,6 +147,30 @@ const getBackgroundColorForEffect = (
   }
 };
 
+// エフェクトに応じたオーバーレイ色の取得
+const getEffectOverlayColor = (effectId: number): string => {
+  switch (effectId) {
+    case 0: // Bad TV - Subtle
+      return "rgba(20, 20, 20, 0.3)"; // 暗いグレー
+    case 1: // Bad TV - Moderate
+      return "rgba(10, 10, 10, 0.5)"; // より暗いグレー
+    case 2: // Bad TV - Heavy
+      return "rgba(5, 5, 5, 0.7)"; // 非常に暗いグレー
+    case 3: // Bad TV - Extreme
+      return "rgba(0, 0, 0, 0.9)"; // 完全な黒
+    case 4: // Psychedelic - Subtle
+      return "rgba(40, 10, 60, 0.3)"; // 暗い紫
+    case 5: // Psychedelic - Moderate
+      return "rgba(60, 15, 90, 0.4)"; // 紫
+    case 6: // Psychedelic - Intense
+      return "rgba(80, 20, 120, 0.5)"; // 明るい紫
+    case 7: // Psychedelic - Extreme
+      return "rgba(100, 25, 150, 0.6)"; // 非常に明るい紫
+    default:
+      return "rgba(0, 0, 0, 0.8)"; // デフォルトは黒
+  }
+};
+
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   videoRef,
   bitmaps,
@@ -840,15 +864,15 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         }}
       />
 
-      {/* 黒いオーバーレイレイヤー */}
+      {/* エフェクトオーバーレイレイヤー */}
       <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          width: "100%",
-          height: "100%",
-          backgroundColor: "black",
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: getEffectOverlayColor(current),
           opacity: overlayOpacity,
           pointerEvents: "none",
           zIndex: 1,
