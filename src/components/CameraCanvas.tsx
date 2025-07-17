@@ -13,6 +13,7 @@ import {
   psychedelicFragmentShader,
 } from "../utils/psychedelicShader";
 import {getPsychedelicConfigForEffect} from "../utils/psychedelicConfig";
+import {shouldDisableShaders} from "../utils/deviceDetection";
 
 interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -138,6 +139,12 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // モバイルデバイス検出
+  useEffect(() => {
+    setIsMobile(shouldDisableShaders());
+  }, []);
 
   // エフェクト切り替え時のテキスト表示
   useEffect(() => {
@@ -410,6 +417,12 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     if (!ready || isPreviewMode) return;
 
     const canvas = canvasRef.current!;
+
+    // モバイルデバイスの場合はシェーダーを無効化
+    if (isMobile) {
+      console.log("Mobile device detected - shaders disabled");
+      return;
+    }
 
     // WebGL初期化
     if (!glRef.current) {
@@ -687,17 +700,45 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   return (
     <>
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-        }}
-      />
+      {/* モバイルデバイスの場合はシンプルな表示 */}
+      {isMobile ? (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "black",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            fontSize: "24px",
+            textAlign: "center",
+          }}
+        >
+          <div>
+            <div style={{marginBottom: "20px"}}>📱 Mobile Device Detected</div>
+            <div style={{fontSize: "18px", opacity: 0.8}}>
+              Shaders disabled for performance
+            </div>
+          </div>
+        </div>
+      ) : (
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      )}
+
       {/* 黒いオーバーレイレイヤー */}
       <div
         style={{
