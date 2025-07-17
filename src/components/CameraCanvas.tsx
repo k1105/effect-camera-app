@@ -353,6 +353,32 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             drawQuad(gl, program, identity, videoTexture);
           }
 
+          // Static Shaderを別レイヤーとしてオーバーレイ
+          const staticConfig = getStaticConfigForEffect(current);
+          gl.useProgram(staticProgramRef.current!);
+
+          const staticTimeLocation = gl.getUniformLocation(
+            staticProgramRef.current!,
+            "u_time"
+          );
+          const staticIntensityLocation = gl.getUniformLocation(
+            staticProgramRef.current!,
+            "u_staticIntensity"
+          );
+          const staticSizeLocation = gl.getUniformLocation(
+            staticProgramRef.current!,
+            "u_staticSize"
+          );
+
+          gl.uniform1f(staticTimeLocation, currentTime * 0.001);
+          gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
+          gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
+
+          // 現在のフレームバッファをテクスチャとして使用してStaticShaderを適用
+          const frameBufferTexture = createTextureFromCanvas(gl, canvas);
+          drawQuad(gl, staticProgramRef.current!, identity, frameBufferTexture);
+          gl.deleteTexture(frameBufferTexture);
+
           // カメラ映像テクスチャを解放
           gl.deleteTexture(videoTexture);
 
