@@ -121,6 +121,32 @@ const getEffectName = (effectId: number): string => {
   return effectNames[effectId] || `Effect ${effectId}`;
 };
 
+// エフェクトに応じた背景色の取得
+const getBackgroundColorForEffect = (
+  effectId: number
+): [number, number, number, number] => {
+  switch (effectId) {
+    case 0: // Bad TV - Subtle
+      return [0.1, 0.1, 0.1, 1.0]; // 暗いグレー
+    case 1: // Bad TV - Moderate
+      return [0.05, 0.05, 0.05, 1.0]; // より暗いグレー
+    case 2: // Bad TV - Heavy
+      return [0.02, 0.02, 0.02, 1.0]; // 非常に暗いグレー
+    case 3: // Bad TV - Extreme
+      return [0.0, 0.0, 0.0, 1.0]; // 完全な黒
+    case 4: // Psychedelic - Subtle
+      return [0.1, 0.05, 0.15, 1.0]; // 暗い紫
+    case 5: // Psychedelic - Moderate
+      return [0.15, 0.05, 0.2, 1.0]; // 紫
+    case 6: // Psychedelic - Intense
+      return [0.2, 0.05, 0.25, 1.0]; // 明るい紫
+    case 7: // Psychedelic - Extreme
+      return [0.25, 0.05, 0.3, 1.0]; // 非常に明るい紫
+    default:
+      return [0.0, 0.0, 0.0, 1.0]; // デフォルトは黒
+  }
+};
+
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   videoRef,
   bitmaps,
@@ -488,8 +514,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             return;
           }
 
-          // 背景をクリア
-          gl.clearColor(0, 0, 0, 1);
+          // エフェクトに応じた背景色を設定
+          const backgroundColor = getBackgroundColorForEffect(current);
+          gl.clearColor(
+            backgroundColor[0],
+            backgroundColor[1],
+            backgroundColor[2],
+            backgroundColor[3]
+          );
           gl.clear(gl.COLOR_BUFFER_BIT);
 
           // カメラ映像のテクスチャを作成
@@ -555,8 +587,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           return;
         }
 
-        // 背景をクリア
-        gl.clearColor(0, 0, 0, 1);
+        // エフェクトに応じた背景色を設定
+        const backgroundColor = getBackgroundColorForEffect(current);
+        gl.clearColor(
+          backgroundColor[0],
+          backgroundColor[1],
+          backgroundColor[2],
+          backgroundColor[3]
+        );
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         // カメラ映像のテクスチャを作成
