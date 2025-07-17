@@ -439,6 +439,42 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
     const canvas = canvasRef.current!;
 
+    // WebGL初期化
+    if (!glRef.current) {
+      if (!initWebGL()) return;
+    }
+
+    const gl = glRef.current!;
+    const program = programRef.current!;
+    const blendProgram = blendProgramRef.current!;
+    const badTVProgram = badTVProgramRef.current!;
+    const psychedelicProgram = psychedelicProgramRef.current!;
+    const mobileProgram = mobileProgramRef.current!;
+
+    if (
+      !gl ||
+      !program ||
+      !blendProgram ||
+      !badTVProgram ||
+      !psychedelicProgram ||
+      !mobileProgram
+    ) {
+      console.error("WebGL initialization failed");
+      return;
+    }
+
+    // canvasの解像度設定（固定解像度）
+    const targetWidth = 1080;
+    const targetHeight = 1920;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    gl.viewport(0, 0, targetWidth, targetHeight);
+
+    let raf = 0;
+    let lastDrawTime = 0;
+    const targetFPS = 30; // モバイル用に30fpsに制限
+    const frameInterval = 1000 / targetFPS;
+
     // モバイルデバイスの場合は軽量シェーダーを使用
     if (isMobile) {
       console.log("Mobile device detected - using lightweight shader");
@@ -500,42 +536,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       raf = requestAnimationFrame(mobileDraw);
       return () => cancelAnimationFrame(raf);
     }
-
-    // WebGL初期化
-    if (!glRef.current) {
-      if (!initWebGL()) return;
-    }
-
-    const gl = glRef.current!;
-    const program = programRef.current!;
-    const blendProgram = blendProgramRef.current!;
-    const badTVProgram = badTVProgramRef.current!;
-    const psychedelicProgram = psychedelicProgramRef.current!;
-    const mobileProgram = mobileProgramRef.current!;
-
-    if (
-      !gl ||
-      !program ||
-      !blendProgram ||
-      !badTVProgram ||
-      !psychedelicProgram ||
-      !mobileProgram
-    ) {
-      console.error("WebGL initialization failed");
-      return;
-    }
-
-    // canvasの解像度設定（固定解像度）
-    const targetWidth = 1080;
-    const targetHeight = 1920;
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    gl.viewport(0, 0, targetWidth, targetHeight);
-
-    let raf = 0;
-    let lastDrawTime = 0;
-    const targetFPS = 30; // モバイル用に30fpsに制限
-    const frameInterval = 1000 / targetFPS;
 
     const draw = (currentTime: number) => {
       try {
