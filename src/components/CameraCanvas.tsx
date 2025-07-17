@@ -6,9 +6,14 @@ import {
 } from "../utils/effectRenderer";
 import {getBadTVConfigForEffect} from "../utils/badTVConfig";
 import {getPsychedelicConfigForEffect} from "../utils/psychedelicConfig";
+import {getStaticConfigForEffect} from "../utils/staticConfig";
 
 import {shouldDisableShaders} from "../utils/deviceDetection";
-import {createTexture, drawQuad} from "../utils/webglUtils";
+import {
+  createTexture,
+  createTextureFromCanvas,
+  drawQuad,
+} from "../utils/webglUtils";
 import {initWebGL} from "../utils/webGLInitializer";
 import {
   getEffectName,
@@ -43,7 +48,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const blendProgramRef = useRef<WebGLProgram | null>(null);
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
-  const mobileProgramRef = useRef<WebGLProgram | null>(null);
+  const staticProgramRef = useRef<WebGLProgram | null>(null);
   const [aspLogoBitmap, setAspLogoBitmap] = useState<ImageBitmap | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
@@ -87,7 +92,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       blendProgramRef.current = result.programs.blendProgram;
       badTVProgramRef.current = result.programs.badTVProgram;
       psychedelicProgramRef.current = result.programs.psychedelicProgram;
-      mobileProgramRef.current = result.programs.mobileProgram;
+      staticProgramRef.current = result.programs.staticProgram;
 
       console.log("WebGL initialized successfully");
       return true;
@@ -153,7 +158,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     const blendProgram = blendProgramRef.current!;
     const badTVProgram = badTVProgramRef.current!;
     const psychedelicProgram = psychedelicProgramRef.current!;
-    const mobileProgram = mobileProgramRef.current!;
+    const staticProgram = staticProgramRef.current!;
 
     if (
       !gl ||
@@ -161,7 +166,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       !blendProgram ||
       !badTVProgram ||
       !psychedelicProgram ||
-      !mobileProgram
+      !staticProgram
     ) {
       console.error("WebGL initialization failed");
       return;
@@ -179,9 +184,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     const targetFPS = 30; // モバイル用に30fpsに制限
     const frameInterval = 1000 / targetFPS;
 
-    // モバイルデバイスの場合は軽量シェーダーを使用
+    // モバイルデバイスの場合はPC版と同じエフェクトを使用
     if (isMobile) {
-      console.log("Mobile device detected - using lightweight shader");
+      console.log("Mobile device detected - using PC effects");
 
       // モバイル用の軽量描画ループ
       const mobileDraw = (currentTime: number) => {
@@ -318,7 +323,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
               psychedelicProgramRef.current!,
               "u_glowIntensity"
             );
-
             gl.uniform1f(timeLocation, currentTime * 0.001);
             gl.uniform1f(
               thermalIntensityLocation,
@@ -452,7 +456,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             badTVProgramRef.current!,
             "u_interlaceLineWidth"
           );
-
           gl.uniform1f(timeLocation, currentTime * 0.001);
           gl.uniform1f(distortionLocation, badTVConfig.distortion);
           gl.uniform1f(distortion2Location, badTVConfig.distortion2);
@@ -504,7 +507,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-
           gl.uniform1f(timeLocation, currentTime * 0.001);
           gl.uniform1f(
             thermalIntensityLocation,
@@ -527,48 +529,31 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           drawQuad(gl, program, identity, videoTexture);
         }
 
-        // エフェクトの描画（カメラ映像の上に重ねる）
-        // if (
-        //   effectRenderData.effectBitmap &&
-        //   effectRenderData.positions.length > 0
-        // ) {
-        //   const effectTexture = createTexture(
-        //     gl,
-        //     effectRenderData.effectBitmap
-        //   );
+        // Static Shaderを別レイヤーとしてオーバーレイ
+        const staticConfig = getStaticConfigForEffect(current);
+        gl.useProgram(staticProgramRef.current!);
 
-        //   for (const pos of effectRenderData.positions) {
-        //     const {transform} = calculateEffectTransform(
-        //       pos,
-        //       effectRenderData.effectBitmap,
-        //       targetWidth,
-        //       targetHeight
-        //     );
+        const staticTimeLocation = gl.getUniformLocation(
+          staticProgramRef.current!,
+          "u_time"
+        );
+        const staticIntensityLocation = gl.getUniformLocation(
+          staticProgramRef.current!,
+          "u_staticIntensity"
+        );
+        const staticSizeLocation = gl.getUniformLocation(
+          staticProgramRef.current!,
+          "u_staticSize"
+        );
 
-        //     // 通常のブレンドモードを使用
-        //     const blendModeValue = getBlendModeValue(blendMode);
-        //     gl.useProgram(blendProgram);
+        gl.uniform1f(staticTimeLocation, currentTime * 0.001);
+        gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
+        gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 
-        //     const blendModeLocation = gl.getUniformLocation(
-        //       blendProgram,
-        //       "u_blendMode"
-        //     );
-        //     gl.uniform1i(blendModeLocation, blendModeValue);
-
-        //     // 背景テクスチャの設定（カメラ映像の代わりに現在のフレームバッファを使用）
-        //     const backgroundLocation = gl.getUniformLocation(
-        //       blendProgram,
-        //       "u_background"
-        //     );
-        //     gl.activeTexture(gl.TEXTURE1);
-        //     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-        //     gl.uniform1i(backgroundLocation, 1);
-
-        //     drawQuad(gl, blendProgram, transform, effectTexture);
-        //   }
-        //   // エフェクトテクスチャを解放
-        //   gl.deleteTexture(effectTexture);
-        // }
+        // 現在のフレームバッファをテクスチャとして使用してStaticShaderを適用
+        const frameBufferTexture = createTextureFromCanvas(gl, canvas);
+        drawQuad(gl, staticProgramRef.current!, identity, frameBufferTexture);
+        gl.deleteTexture(frameBufferTexture);
 
         // カメラ映像テクスチャを解放（描画完了後）
         gl.deleteTexture(videoTexture);

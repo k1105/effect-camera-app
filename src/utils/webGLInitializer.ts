@@ -3,20 +3,21 @@ import {
   vertexShaderSource,
   fragmentShaderSource,
   blendFragmentShaderSource,
+  staticVertexShader,
+  staticFragmentShader,
 } from "./shaderSources";
 import {badTVVertexShader, badTVFragmentShader} from "./badTVShader";
 import {
   psychedelicVertexShader,
   psychedelicFragmentShader,
 } from "./psychedelicShader";
-import {mobileVertexShader, mobileFragmentShader} from "./mobileShader";
 
 export interface WebGLPrograms {
   program: WebGLProgram | null;
   blendProgram: WebGLProgram | null;
   badTVProgram: WebGLProgram | null;
   psychedelicProgram: WebGLProgram | null;
-  mobileProgram: WebGLProgram | null;
+  staticProgram: WebGLProgram | null;
 }
 
 // WebGL初期化
@@ -36,7 +37,7 @@ export const initWebGL = (
           blendProgram: null,
           badTVProgram: null,
           psychedelicProgram: null,
-          mobileProgram: null,
+          staticProgram: null,
         },
       };
     }
@@ -73,15 +74,15 @@ export const initWebGL = (
       gl.FRAGMENT_SHADER,
       psychedelicFragmentShader
     );
-    const mobileVertexShaderObj = createShader(
+    const staticVertexShaderObj = createShader(
       gl,
       gl.VERTEX_SHADER,
-      mobileVertexShader
+      staticVertexShader
     );
-    const mobileFragmentShaderObj = createShader(
+    const staticFragmentShaderObj = createShader(
       gl,
       gl.FRAGMENT_SHADER,
-      mobileFragmentShader
+      staticFragmentShader
     );
 
     if (
@@ -92,8 +93,8 @@ export const initWebGL = (
       !badTVFragmentShaderObj ||
       !psychedelicVertexShaderObj ||
       !psychedelicFragmentShaderObj ||
-      !mobileVertexShaderObj ||
-      !mobileFragmentShaderObj
+      !staticVertexShaderObj ||
+      !staticFragmentShaderObj
     ) {
       console.error("Shader creation failed");
       return {
@@ -103,7 +104,7 @@ export const initWebGL = (
           blendProgram: null,
           badTVProgram: null,
           psychedelicProgram: null,
-          mobileProgram: null,
+          staticProgram: null,
         },
       };
     }
@@ -121,10 +122,10 @@ export const initWebGL = (
       psychedelicVertexShaderObj,
       psychedelicFragmentShaderObj
     );
-    const mobileProgram = createProgram(
+    const staticProgram = createProgram(
       gl,
-      mobileVertexShaderObj,
-      mobileFragmentShaderObj
+      staticVertexShaderObj,
+      staticFragmentShaderObj
     );
 
     if (
@@ -132,7 +133,7 @@ export const initWebGL = (
       !blendProgram ||
       !badTVProgram ||
       !psychedelicProgram ||
-      !mobileProgram
+      !staticProgram
     ) {
       console.error("Program creation failed");
       return {
@@ -142,7 +143,7 @@ export const initWebGL = (
           blendProgram: null,
           badTVProgram: null,
           psychedelicProgram: null,
-          mobileProgram: null,
+          staticProgram: null,
         },
       };
     }
@@ -159,7 +160,7 @@ export const initWebGL = (
         blendProgram,
         badTVProgram,
         psychedelicProgram,
-        mobileProgram,
+        staticProgram,
       },
     };
   } catch (error) {
@@ -171,7 +172,7 @@ export const initWebGL = (
         blendProgram: null,
         badTVProgram: null,
         psychedelicProgram: null,
-        mobileProgram: null,
+        staticProgram: null,
       },
     };
   }

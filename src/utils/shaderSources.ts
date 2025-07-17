@@ -78,3 +78,45 @@ export const blendFragmentShaderSource = `
     gl_FragColor = vec4(blended, textureColor.a * u_alpha);
   }
 `;
+
+// Static Shader (based on https://github.com/felixturner/bad-tv-shader)
+export const staticVertexShader = `
+  attribute vec2 a_position;
+  attribute vec2 a_texCoord;
+  uniform mat3 u_transform;
+  varying vec2 v_texCoord;
+  
+  void main() {
+    vec2 position = (u_transform * vec3(a_position, 1.0)).xy;
+    gl_Position = vec4(position, 0.0, 1.0);
+    v_texCoord = a_texCoord;
+  }
+`;
+
+export const staticFragmentShader = `
+  precision mediump float;
+  
+  uniform sampler2D u_texture;
+  uniform float u_time;
+  uniform float u_staticIntensity;
+  uniform float u_staticSize;
+  
+  varying vec2 v_texCoord;
+  
+  float rand(vec2 co) {
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+  }
+  
+  void main() {
+    vec2 p = v_texCoord;
+    vec4 color = texture2D(u_texture, p);
+    
+    // Calculate noise based on screen coordinates and size
+    float xs = floor(gl_FragCoord.x / u_staticSize);
+    float ys = floor(gl_FragCoord.y / u_staticSize);
+    vec4 snow = vec4(rand(vec2(xs * u_time, ys * u_time)) * u_staticIntensity);
+    
+    // Additive blending
+    gl_FragColor = color + snow;
+  }
+`;
