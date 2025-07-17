@@ -4,32 +4,32 @@ import type {PsychedelicConfig} from "./psychedelicShader";
 // 設定プリセット
 export const psychedelicPresets = {
   subtle: {
-    inversionIntensity: 0.1,
-    hueShift: 0.2,
-    psychedelicSpeed: 0.3,
+    thermalIntensity: 0.3,
+    contrastIntensity: 0.4,
+    psychedelicSpeed: 0.2,
     channelShift: 0.1,
-    waveIntensity: 0.2,
+    glowIntensity: 0.2,
   },
   moderate: {
-    inversionIntensity: 0.3,
-    hueShift: 0.5,
-    psychedelicSpeed: 0.5,
+    thermalIntensity: 0.6,
+    contrastIntensity: 0.7,
+    psychedelicSpeed: 0.4,
     channelShift: 0.3,
-    waveIntensity: 0.4,
+    glowIntensity: 0.5,
   },
   intense: {
-    inversionIntensity: 0.6,
-    hueShift: 0.8,
-    psychedelicSpeed: 0.7,
+    thermalIntensity: 0.8,
+    contrastIntensity: 0.9,
+    psychedelicSpeed: 0.6,
     channelShift: 0.6,
-    waveIntensity: 0.6,
+    glowIntensity: 0.8,
   },
   extreme: {
-    inversionIntensity: 0.9,
-    hueShift: 1.0,
-    psychedelicSpeed: 1.0,
+    thermalIntensity: 1.0,
+    contrastIntensity: 1.0,
+    psychedelicSpeed: 0.8,
     channelShift: 0.9,
-    waveIntensity: 0.8,
+    glowIntensity: 1.0,
   },
 };
 

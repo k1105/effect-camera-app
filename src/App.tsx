@@ -24,7 +24,6 @@ const BLEND_MODES = [
 function FullCameraApp() {
   /* ---------- Refs & State ---------- */
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const initedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -169,12 +168,6 @@ function FullCameraApp() {
     }
   };
 
-  const takePhoto = (canvas: HTMLCanvasElement) => {
-    const imageData = canvas.toDataURL("image/png");
-    setPreviewImage(imageData);
-    setIsPreviewMode(true);
-  };
-
   const downloadPhoto = () => {
     if (!previewImage) return;
 
@@ -268,7 +261,6 @@ function FullCameraApp() {
             current={current}
             ready={ready}
             isPreviewMode={isPreviewMode}
-            onTakePhoto={takePhoto}
             blendMode={blendMode}
             isSwitchingCamera={isSwitchingCamera}
             isNoSignalDetected={isNoSignalDetected}
@@ -329,9 +321,6 @@ function FullCameraApp() {
               hasMultipleCameras={hasMultipleCameras}
               isFrontCamera={isFrontCamera}
               onSwitchCamera={switchCamera}
-              onTakePhoto={() =>
-                canvasRef.current && takePhoto(canvasRef.current)
-              }
             />
 
             {isZoomSupported && !isFrontCamera && (

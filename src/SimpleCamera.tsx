@@ -86,7 +86,6 @@ export default function SimpleCamera() {
         current={current}
         ready={ready}
         isPreviewMode={false}
-        onTakePhoto={() => {}} // 空の関数
         blendMode={blendMode}
         isSwitchingCamera={false}
       />

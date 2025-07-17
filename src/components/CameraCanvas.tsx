@@ -574,13 +574,13 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           psychedelicProgramRef.current!,
           "u_time"
         );
-        const inversionIntensityLocation = gl.getUniformLocation(
+        const thermalIntensityLocation = gl.getUniformLocation(
           psychedelicProgramRef.current!,
-          "u_inversionIntensity"
+          "u_thermalIntensity"
         );
-        const hueShiftLocation = gl.getUniformLocation(
+        const contrastIntensityLocation = gl.getUniformLocation(
           psychedelicProgramRef.current!,
-          "u_hueShift"
+          "u_contrastIntensity"
         );
         const psychedelicSpeedLocation = gl.getUniformLocation(
           psychedelicProgramRef.current!,
@@ -590,23 +590,26 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           psychedelicProgramRef.current!,
           "u_channelShift"
         );
-        const waveIntensityLocation = gl.getUniformLocation(
+        const glowIntensityLocation = gl.getUniformLocation(
           psychedelicProgramRef.current!,
-          "u_waveIntensity"
+          "u_glowIntensity"
         );
 
         gl.uniform1f(timeLocation, currentTime * 0.001);
         gl.uniform1f(
-          inversionIntensityLocation,
-          psychedelicConfig.inversionIntensity
+          thermalIntensityLocation,
+          psychedelicConfig.thermalIntensity
         );
-        gl.uniform1f(hueShiftLocation, psychedelicConfig.hueShift);
+        gl.uniform1f(
+          contrastIntensityLocation,
+          psychedelicConfig.contrastIntensity
+        );
         gl.uniform1f(
           psychedelicSpeedLocation,
           psychedelicConfig.psychedelicSpeed
         );
         gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
-        gl.uniform1f(waveIntensityLocation, psychedelicConfig.waveIntensity);
+        gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
 
         drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
       } else {

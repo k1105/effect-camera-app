@@ -1,5 +1,5 @@
 // サイケデリックシェーダー
-// 色反転と色相シフトによるサイケデリック効果
+// サーマルビジョン/ヒートマップ風のサイケデリック効果
 
 export const psychedelicVertexShader = `
   attribute vec2 a_position;
@@ -19,71 +19,86 @@ export const psychedelicFragmentShader = `
   
   uniform sampler2D u_texture;
   uniform float u_time;
-  uniform float u_inversionIntensity; // 色反転の強度 (0.0 - 1.0)
-  uniform float u_hueShift; // 色相シフトの強度 (0.0 - 1.0)
+  uniform float u_thermalIntensity; // サーマル効果の強度 (0.0 - 1.0)
+  uniform float u_contrastIntensity; // コントラスト効果の強度 (0.0 - 1.0)
   uniform float u_psychedelicSpeed; // サイケデリック効果の速度 (0.0 - 1.0)
   uniform float u_channelShift; // チャンネルシフトの強度 (0.0 - 1.0)
-  uniform float u_waveIntensity; // 波効果の強度 (0.0 - 1.0)
+  uniform float u_glowIntensity; // グロー効果の強度 (0.0 - 1.0)
   
   varying vec2 v_texCoord;
   
-  // RGB to HSV変換
-  vec3 rgb2hsv(vec3 c) {
-    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-    
-    float d = q.x - min(q.w, q.y);
-    float e = 1.0e-10;
-    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+  // サーマルカラーマッピング
+  vec3 thermalColorMap(float intensity) {
+    // 温度に基づく色マッピング（青→緑→黄→赤→白）
+    if (intensity < 0.2) {
+      return mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), (intensity - 0.0) / 0.2);
+    } else if (intensity < 0.4) {
+      return mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0), (intensity - 0.2) / 0.2);
+    } else if (intensity < 0.6) {
+      return mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 0.5, 0.0), (intensity - 0.4) / 0.2);
+    } else if (intensity < 0.8) {
+      return mix(vec3(1.0, 0.5, 0.0), vec3(1.0, 0.0, 0.0), (intensity - 0.6) / 0.2);
+    } else {
+      return mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0), (intensity - 0.8) / 0.2);
+    }
   }
   
-  // HSV to RGB変換
-  vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+  // 高コントラスト効果
+  vec3 highContrast(vec3 color, float contrast) {
+    return pow(color, vec3(1.0 / (1.0 + contrast * 2.0)));
   }
   
-  // 波効果の計算
-  float wave(vec2 uv, float time) {
-    return sin(uv.x * 10.0 + time) * sin(uv.y * 10.0 + time * 0.5) * 0.5 + 0.5;
+  // グロー効果
+  vec3 addGlow(vec3 color, float glow) {
+    // グロー効果を制限して、加算され続けないようにする
+    vec3 glowEffect = color * glow * 0.5;
+    return clamp(color + glowEffect, 0.0, 1.0);
+  }
+  
+  // チャンネルシフト効果
+  vec3 channelShift(vec3 color, float shift, float time) {
+    vec3 shifted = vec3(
+      color.r + sin(time * 2.0) * shift * 0.3,
+      color.g + sin(time * 1.5) * shift * 0.3,
+      color.b + sin(time * 3.0) * shift * 0.3
+    );
+    // チャンネルシフトも制限して極端な変化を防ぐ
+    return clamp(shifted, 0.0, 1.0);
   }
   
   void main() {
     vec2 uv = v_texCoord;
     vec4 texColor = texture2D(u_texture, uv);
     
-    // 波効果によるUV歪み
-    float waveEffect = wave(uv, u_time * u_psychedelicSpeed);
-    vec2 distortedUV = uv + vec2(waveEffect * u_waveIntensity * 0.1);
-    texColor = texture2D(u_texture, distortedUV);
+    // 明度を計算（サーマル効果のベース）
+    float brightness = (texColor.r + texColor.g + texColor.b) / 3.0;
     
-    // RGB to HSV変換
-    vec3 hsv = rgb2hsv(texColor.rgb);
+    // サーマルカラーマッピング
+    vec3 thermalColor = thermalColorMap(brightness);
     
-    // 色相シフト（時間と位置に基づく）
-    float hueShift = u_hueShift * sin(u_time * u_psychedelicSpeed) * 0.5 + 0.5;
-    hsv.x = mod(hsv.x + hueShift + waveEffect * 0.3, 1.0);
+    // 時間に基づく動的な色変化
+    float timeEffect = sin(u_time * u_psychedelicSpeed) * 0.5 + 0.5;
+    vec3 dynamicColor = mix(thermalColor, 1.0 - thermalColor, timeEffect * u_thermalIntensity);
     
-    // HSV to RGB変換
-    vec3 shiftedColor = hsv2rgb(hsv);
+    // チャンネルシフト
+    vec3 shiftedColor = channelShift(dynamicColor, u_channelShift, u_time * u_psychedelicSpeed);
     
-    // チャンネルシフト（RGB各チャンネルを個別にシフト）
-    vec3 channelShifted = vec3(
-      shiftedColor.r + sin(u_time * u_psychedelicSpeed * 2.0) * u_channelShift * 0.3,
-      shiftedColor.g + sin(u_time * u_psychedelicSpeed * 1.5) * u_channelShift * 0.3,
-      shiftedColor.b + sin(u_time * u_psychedelicSpeed * 3.0) * u_channelShift * 0.3
-    );
+    // 高コントラスト効果
+    vec3 contrastColor = highContrast(shiftedColor, u_contrastIntensity);
     
-    // 色反転
-    vec3 invertedColor = 1.0 - channelShifted;
+    // グロー効果
+    vec3 finalColor = addGlow(contrastColor, u_glowIntensity);
     
-    // 反転とオリジナルのブレンド
-    vec3 finalColor = mix(channelShifted, invertedColor, u_inversionIntensity);
+    // 最終的な色を適切に制限（0.0-1.0の範囲に）
+    finalColor = clamp(finalColor, 0.0, 1.0);
     
-    // 明度の調整（サイケデリック効果で明るく）
-    finalColor = finalColor * (1.0 + waveEffect * u_waveIntensity * 0.5);
+    // 過度な明度を防ぐための追加制限
+    float maxBrightness = 0.9; // 最大明度を90%に制限
+    float currentBrightness = (finalColor.r + finalColor.g + finalColor.b) / 3.0;
+    if (currentBrightness > maxBrightness) {
+      float scale = maxBrightness / currentBrightness;
+      finalColor = finalColor * scale;
+    }
     
     gl_FragColor = vec4(finalColor, texColor.a);
   }
@@ -91,9 +106,9 @@ export const psychedelicFragmentShader = `
 
 // サイケデリック設定のインターフェース
 export interface PsychedelicConfig {
-  inversionIntensity: number; // 色反転の強度 (0.0 - 1.0)
-  hueShift: number; // 色相シフトの強度 (0.0 - 1.0)
+  thermalIntensity: number; // サーマル効果の強度 (0.0 - 1.0)
+  contrastIntensity: number; // コントラスト効果の強度 (0.0 - 1.0)
   psychedelicSpeed: number; // サイケデリック効果の速度 (0.0 - 1.0)
   channelShift: number; // チャンネルシフトの強度 (0.0 - 1.0)
-  waveIntensity: number; // 波効果の強度 (0.0 - 1.0)
+  glowIntensity: number; // グロー効果の強度 (0.0 - 1.0)
 }
