@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from "react";
-import img0 from "../assets/dlt-logo-animation/img0.png";
-import img1 from "../assets/dlt-logo-animation/img1.png";
+// import img0 from "../assets/dlt-logo-animation/img0.png";
+// import img1 from "../assets/dlt-logo-animation/img1.png";
+import aspLogo from "../assets/asp-logo.png";
 import {getLayoutForEffect, calculatePositions} from "../utils/effectLayouts";
 
 type BlendMode =
@@ -35,20 +36,26 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   isNoSignalDetected = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [logoBitmaps, setLogoBitmaps] = useState<
-    [ImageBitmap, ImageBitmap] | null
-  >(null);
-  const currentFrameRef = useRef(0);
+  // const [logoBitmaps, setLogoBitmaps] = useState<
+  //   [ImageBitmap, ImageBitmap] | null
+  // >(null);
+  // const currentFrameRef = useRef(0);
+  const [aspLogoBitmap, setAspLogoBitmap] = useState<ImageBitmap | null>(null);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.8);
 
   // ロゴ画像のプリロード
   useEffect(() => {
     const preloadLogoImages = async () => {
       try {
-        const [bitmap0, bitmap1] = await Promise.all([
-          createImageBitmap(await fetch(img0).then((r) => r.blob())),
-          createImageBitmap(await fetch(img1).then((r) => r.blob())),
-        ]);
-        setLogoBitmaps([bitmap0, bitmap1]);
+        // const [bitmap0, bitmap1] = await Promise.all([
+        //   createImageBitmap(await fetch(img0).then((r) => r.blob())),
+        //   createImageBitmap(await fetch(img1).then((r) => r.blob())),
+        // ]);
+        // setLogoBitmaps([bitmap0, bitmap1]);
+        const bitmap = await createImageBitmap(
+          await fetch(aspLogo).then((r) => r.blob())
+        );
+        setAspLogoBitmap(bitmap);
       } catch (error) {
         console.error("ロゴ画像の読み込みに失敗しました:", error);
       }
@@ -57,43 +64,70 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     preloadLogoImages();
   }, []);
 
-  // ロゴアニメーションのフレーム計算
-  const getLogoFrameData = (frame: number) => {
-    const TOTAL_FRAMES = 120;
-    const normalizedFrame = frame % TOTAL_FRAMES;
+  // エフェクトが検出された時のオーバーレイフェードアウト
+  useEffect(() => {
+    if (!isNoSignalDetected && overlayOpacity > 0) {
+      // エフェクトが検出された場合、オーバーレイをフェードアウト
+      const fadeOutDuration = 500; // 500ms
+      const fadeOutSteps = 20;
+      const opacityStep = overlayOpacity / fadeOutSteps;
+      const stepDuration = fadeOutDuration / fadeOutSteps;
 
-    if (normalizedFrame < 100) {
-      // img0.png (フレーム0-99)
-      const gridX = normalizedFrame % 10;
-      const gridY = Math.floor(normalizedFrame / 10);
-      return {
-        bitmap: logoBitmaps![0],
-        sourceX: gridX * 400, // 4000px / 10 = 400px per grid
-        sourceY: gridY * 400,
-        sourceWidth: 400,
-        sourceHeight: 400,
-      };
-    } else {
-      // img1.png (フレーム100-119)
-      const frameInImg1 = normalizedFrame - 100;
-      const gridX = frameInImg1 % 10;
-      const gridY = Math.floor(frameInImg1 / 10); // 0-1 (上から2段分のみ)
-      return {
-        bitmap: logoBitmaps![1],
-        sourceX: gridX * 400,
-        sourceY: gridY * 400,
-        sourceWidth: 400,
-        sourceHeight: 400,
-      };
+      const fadeOutInterval = setInterval(() => {
+        setOverlayOpacity((prev) => {
+          const newOpacity = prev - opacityStep;
+          if (newOpacity <= 0) {
+            clearInterval(fadeOutInterval);
+            return 0;
+          }
+          return newOpacity;
+        });
+      }, stepDuration);
+
+      return () => clearInterval(fadeOutInterval);
+    } else if (isNoSignalDetected && overlayOpacity < 0.8) {
+      // 信号が検出されていない場合、オーバーレイをフェードイン
+      setOverlayOpacity(0.8);
     }
-  };
+  }, [isNoSignalDetected, overlayOpacity]);
+
+  // ロゴアニメーションのフレーム計算
+  // const getLogoFrameData = (frame: number) => {
+  //   const TOTAL_FRAMES = 120;
+  //   const normalizedFrame = frame % TOTAL_FRAMES;
+
+  //   if (normalizedFrame < 100) {
+  //     // img0.png (フレーム0-99)
+  //     const gridX = normalizedFrame % 10;
+  //     const gridY = Math.floor(normalizedFrame / 10);
+  //     return {
+  //       bitmap: logoBitmaps![0],
+  //       sourceX: gridX * 400, // 4000px / 10 = 400px per grid
+  //       sourceY: gridY * 400,
+  //       sourceWidth: 400,
+  //       sourceHeight: 400,
+  //     };
+  //   } else {
+  //     // img1.png (フレーム100-119)
+  //     const frameInImg1 = normalizedFrame - 100;
+  //     const gridX = frameInImg1 % 10;
+  //     const gridY = Math.floor(frameInImg1 / 10); // 0-1 (上から2段分のみ)
+  //     return {
+  //       bitmap: logoBitmaps![1],
+  //       sourceX: gridX * 400,
+  //       sourceY: gridY * 400,
+  //       sourceWidth: 400,
+  //       sourceHeight: 400,
+  //     };
+  //   }
+  // };
 
   useEffect(() => {
     if (!ready || isPreviewMode) return;
 
     let raf = 0;
-    let lastTime = 0;
-    const FRAME_DURATION = 50; // 50ms per frame (20fps)
+    // let lastTime = 0;
+    // const FRAME_DURATION = 50; // 50ms per frame (20fps)
 
     const draw = (currentTime: number) => {
       const cvs = canvasRef.current!;
@@ -184,14 +218,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       }
 
       // ロゴアニメーションの描画（信号が検出されていない時）
-      if (isNoSignalDetected && logoBitmaps) {
+      if (isNoSignalDetected && aspLogoBitmap) {
         // アニメーションフレームの更新
-        if (currentTime - lastTime >= FRAME_DURATION) {
-          currentFrameRef.current = (currentFrameRef.current + 1) % 120;
-          lastTime = currentTime;
-        }
+        // if (currentTime - lastTime >= FRAME_DURATION) {
+        //   currentFrameRef.current = (currentFrameRef.current + 1) % 120;
+        //   lastTime = currentTime;
+        // }
 
-        const frameData = getLogoFrameData(currentFrameRef.current);
+        // const frameData = getLogoFrameData(currentFrameRef.current);
 
         // ロゴを中央に配置（サイズは調整可能）
         const logoSize = 300;
@@ -199,17 +233,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         const logoY = (targetHeight - logoSize) / 2;
 
         ctx.globalCompositeOperation = "source-over";
-        ctx.drawImage(
-          frameData.bitmap,
-          frameData.sourceX,
-          frameData.sourceY,
-          frameData.sourceWidth,
-          frameData.sourceHeight,
-          logoX,
-          logoY,
-          logoSize,
-          logoSize
-        );
+        ctx.drawImage(aspLogoBitmap, logoX, logoY, logoSize, logoSize);
       }
 
       raf = requestAnimationFrame(draw);
@@ -226,21 +250,39 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     blendMode,
     isSwitchingCamera,
     isNoSignalDetected,
-    logoBitmaps,
+    // logoBitmaps,
+    aspLogoBitmap,
   ]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      onClick={() => onTakePhoto?.(canvasRef.current!)}
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        objectFit: "contain",
-      }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        onClick={() => onTakePhoto?.(canvasRef.current!)}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+        }}
+      />
+      {/* 黒いオーバーレイレイヤー */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "black",
+          opacity: overlayOpacity,
+          pointerEvents: "none",
+          zIndex: 1,
+          transition: "opacity 0.1s ease-out",
+        }}
+      />
+    </>
   );
 };

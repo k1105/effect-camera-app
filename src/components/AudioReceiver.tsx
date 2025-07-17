@@ -93,7 +93,7 @@ export function AudioReceiver({
   // 周波数計算
   const getFrequencyForChannel = (channel: number) => {
     const step = CONFIG.FREQ_RANGE / CONFIG.NUM_CHANNELS;
-    return CONFIG.BASE_FREQ + channel * step;
+    return CONFIG.BASE_FREQ + (CONFIG.NUM_CHANNELS - channel) * step;
   };
 
   // 検出ループ開始
