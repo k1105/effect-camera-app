@@ -1,4 +1,4 @@
-// サイケデリックシェーダー
+// サイケデリックシェーダー（モバイル最適化版）
 // サーマルビジョン/ヒートマップ風のサイケデリック効果
 
 export const psychedelicVertexShader = `
@@ -27,42 +27,38 @@ export const psychedelicFragmentShader = `
   
   varying vec2 v_texCoord;
   
-  // サーマルカラーマッピング
+  // 簡略化されたサーマルカラーマッピング
   vec3 thermalColorMap(float intensity) {
     // 温度に基づく色マッピング（青→緑→黄→赤→白）
-    if (intensity < 0.2) {
-      return mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), (intensity - 0.0) / 0.2);
-    } else if (intensity < 0.4) {
-      return mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0), (intensity - 0.2) / 0.2);
-    } else if (intensity < 0.6) {
-      return mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 0.5, 0.0), (intensity - 0.4) / 0.2);
-    } else if (intensity < 0.8) {
-      return mix(vec3(1.0, 0.5, 0.0), vec3(1.0, 0.0, 0.0), (intensity - 0.6) / 0.2);
+    if (intensity < 0.25) {
+      return mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), intensity * 4.0);
+    } else if (intensity < 0.5) {
+      return mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 1.0, 0.0), (intensity - 0.25) * 4.0);
+    } else if (intensity < 0.75) {
+      return mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0), (intensity - 0.5) * 4.0);
     } else {
-      return mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0), (intensity - 0.8) / 0.2);
+      return mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0), (intensity - 0.75) * 4.0);
     }
   }
   
-  // 高コントラスト効果
+  // 簡略化された高コントラスト効果
   vec3 highContrast(vec3 color, float contrast) {
-    return pow(color, vec3(1.0 / (1.0 + contrast * 2.0)));
+    return pow(color, vec3(1.0 / (1.0 + contrast)));
   }
   
-  // グロー効果
+  // 簡略化されたグロー効果
   vec3 addGlow(vec3 color, float glow) {
-    // グロー効果を制限して、加算され続けないようにする
-    vec3 glowEffect = color * glow * 0.5;
+    vec3 glowEffect = color * glow * 0.3;
     return clamp(color + glowEffect, 0.0, 1.0);
   }
   
-  // チャンネルシフト効果
+  // 簡略化されたチャンネルシフト効果
   vec3 channelShift(vec3 color, float shift, float time) {
     vec3 shifted = vec3(
-      color.r + sin(time * 2.0) * shift * 0.3,
-      color.g + sin(time * 1.5) * shift * 0.3,
-      color.b + sin(time * 3.0) * shift * 0.3
+      color.r + sin(time * 1.0) * shift * 0.2,
+      color.g + sin(time * 0.8) * shift * 0.2,
+      color.b + sin(time * 1.2) * shift * 0.2
     );
-    // チャンネルシフトも制限して極端な変化を防ぐ
     return clamp(shifted, 0.0, 1.0);
   }
   
@@ -76,12 +72,12 @@ export const psychedelicFragmentShader = `
     // サーマルカラーマッピング
     vec3 thermalColor = thermalColorMap(brightness);
     
-    // 時間に基づく動的な色変化
-    float timeEffect = sin(u_time * u_psychedelicSpeed) * 0.5 + 0.5;
+    // 時間に基づく動的な色変化（簡略化）
+    float timeEffect = sin(u_time * u_psychedelicSpeed * 0.5) * 0.5 + 0.5;
     vec3 dynamicColor = mix(thermalColor, 1.0 - thermalColor, timeEffect * u_thermalIntensity);
     
     // チャンネルシフト
-    vec3 shiftedColor = channelShift(dynamicColor, u_channelShift, u_time * u_psychedelicSpeed);
+    vec3 shiftedColor = channelShift(dynamicColor, u_channelShift, u_time * u_psychedelicSpeed * 0.3);
     
     // 高コントラスト効果
     vec3 contrastColor = highContrast(shiftedColor, u_contrastIntensity);
@@ -93,7 +89,7 @@ export const psychedelicFragmentShader = `
     finalColor = clamp(finalColor, 0.0, 1.0);
     
     // 過度な明度を防ぐための追加制限
-    float maxBrightness = 0.9; // 最大明度を90%に制限
+    float maxBrightness = 0.85; // 最大明度を85%に制限
     float currentBrightness = (finalColor.r + finalColor.g + finalColor.b) / 3.0;
     if (currentBrightness > maxBrightness) {
       float scale = maxBrightness / currentBrightness;
