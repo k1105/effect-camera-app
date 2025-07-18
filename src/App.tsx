@@ -6,6 +6,7 @@ import {EffectSelector} from "./components/EffectSelector";
 import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
+import {InstallPrompt} from "./components/InstallPrompt";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 
@@ -245,6 +246,7 @@ function FullCameraApp() {
   /* ---------- UI ---------- */
   return (
     <>
+      <InstallPrompt />
       <video
         ref={videoRef}
         style={{display: "none"}}
