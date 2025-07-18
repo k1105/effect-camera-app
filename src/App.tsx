@@ -7,6 +7,7 @@ import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InstallPrompt} from "./components/InstallPrompt";
+import {InitialScreen} from "./components/InitialScreen";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 
@@ -280,8 +281,8 @@ function FullCameraApp() {
             onNoSignalDetected={handleNoSignalDetected}
           />
 
-          {/* ロゴアニメーション - 信号が検出されていない時のみ表示 */}
-          {/* <LogoAnimation isVisible={isNoSignalDetected} /> */}
+          {/* 初期画面 - 信号が検出されていない時のみ表示 */}
+          <InitialScreen isVisible={isNoSignalDetected} />
 
           <div
             className="controls"

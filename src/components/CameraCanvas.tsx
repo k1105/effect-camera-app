@@ -1,5 +1,4 @@
 import {useEffect, useRef, useState} from "react";
-import aspLogo from "../assets/asp-logo.png";
 import {
   calculateEffectRenderData,
   type BlendMode,
@@ -15,11 +14,7 @@ import {
   drawQuad,
 } from "../utils/webglUtils";
 import {initWebGL} from "../utils/webGLInitializer";
-import {
-  getEffectName,
-  getBackgroundColorForEffect,
-  getEffectOverlayColor,
-} from "../utils/effectUtils";
+import {getEffectName, getEffectOverlayColor} from "../utils/effectUtils";
 
 interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -49,7 +44,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
   const staticProgramRef = useRef<WebGLProgram | null>(null);
-  const [aspLogoBitmap, setAspLogoBitmap] = useState<ImageBitmap | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
@@ -62,17 +56,12 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   // エフェクト切り替え時のテキスト表示
   useEffect(() => {
-    if (ready && !isPreviewMode) {
+    if (ready && !isPreviewMode && current >= 0) {
       setShowEffectText(true);
       setEffectTextOpacity(1.0);
-
-      // 2秒後にフェードアウト
-      const fadeOutTimer = setTimeout(() => {
-        setEffectTextOpacity(0);
-        setTimeout(() => setShowEffectText(false), 500);
-      }, 2000);
-
-      return () => clearTimeout(fadeOutTimer);
+    } else {
+      setShowEffectText(false);
+      setEffectTextOpacity(0);
     }
   }, [current, ready, isPreviewMode]);
 
@@ -101,22 +90,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       return false;
     }
   };
-
-  // ロゴ画像のプリロード
-  useEffect(() => {
-    const preloadLogoImages = async () => {
-      try {
-        const bitmap = await createImageBitmap(
-          await fetch(aspLogo).then((r) => r.blob())
-        );
-        setAspLogoBitmap(bitmap);
-      } catch (error) {
-        console.error("ロゴ画像の読み込みに失敗しました:", error);
-      }
-    };
-
-    preloadLogoImages();
-  }, []);
 
   // エフェクトが検出された時のオーバーレイフェードアウト
   useEffect(() => {
@@ -197,14 +170,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             return;
           }
 
-          // エフェクトに応じた背景色を設定
-          const backgroundColor = getBackgroundColorForEffect(current);
-          gl.clearColor(
-            backgroundColor[0],
-            backgroundColor[1],
-            backgroundColor[2],
-            backgroundColor[3]
-          );
+          gl.clearColor(0.0, 0.0, 0.0, 1.0);
           gl.clear(gl.COLOR_BUFFER_BIT);
 
           // カメラ映像のテクスチャを作成
@@ -408,14 +374,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           return;
         }
 
-        // エフェクトに応じた背景色を設定
-        const backgroundColor = getBackgroundColorForEffect(current);
-        gl.clearColor(
-          backgroundColor[0],
-          backgroundColor[1],
-          backgroundColor[2],
-          backgroundColor[3]
-        );
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         // カメラ映像のテクスチャを作成
@@ -584,41 +543,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         // カメラ映像テクスチャを解放（描画完了後）
         gl.deleteTexture(videoTexture);
 
-        // ロゴの描画
-        if (isNoSignalDetected && aspLogoBitmap) {
-          let logoTexture: WebGLTexture;
-          try {
-            logoTexture = createTexture(gl, aspLogoBitmap);
-          } catch (error) {
-            console.error("Failed to create logo texture:", error);
-            raf = requestAnimationFrame(draw);
-            return;
-          }
-          const logoSize = 300; // 固定サイズ
-          const logoX = (targetWidth - logoSize) / 2;
-          const logoY = (targetHeight - logoSize) / 2;
-
-          const scaleX = logoSize / targetWidth;
-          const scaleY = logoSize / targetHeight;
-          const translateX = (logoX - targetWidth / 2) / (targetWidth / 2);
-          const translateY = (logoY - targetHeight / 2) / (targetHeight / 2);
-
-          const logoTransform = [
-            scaleX,
-            0,
-            translateX,
-            0,
-            scaleY,
-            translateY,
-            0,
-            0,
-            1,
-          ];
-
-          drawQuad(gl, program, logoTransform, logoTexture);
-          // ロゴテクスチャを解放
-          gl.deleteTexture(logoTexture);
-        }
+        // ロゴの描画は新しいInitialScreenコンポーネントで処理されるため削除
 
         raf = requestAnimationFrame(draw);
       } catch (error) {
@@ -639,7 +564,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     blendMode,
     isSwitchingCamera,
     isNoSignalDetected,
-    aspLogoBitmap,
   ]);
 
   return (
@@ -656,7 +580,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         }}
       />
 
-      {/* エフェクトオーバーレイレイヤー */}
       <div
         style={{
           position: "fixed",
@@ -671,27 +594,23 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           transition: "opacity 0.1s ease-out",
         }}
       />
+
       {/* エフェクト名表示 */}
       {showEffectText && (
         <div
           style={{
             position: "fixed",
-            top: "50%",
+            bottom: "20px",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            transform: "translateX(-50%)",
             color: "white",
-            fontSize: "48px",
+            fontSize: "24px",
             fontWeight: "bold",
             textAlign: "center",
-            textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
             pointerEvents: "none",
             zIndex: 10,
             opacity: effectTextOpacity,
-            transition: "opacity 0.5s ease-in-out",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            padding: "20px 40px",
-            borderRadius: "10px",
-            border: "2px solid rgba(255, 255, 255, 0.3)",
+            transition: "opacity 0.3s ease-in-out",
           }}
         >
           {getEffectName(current)}

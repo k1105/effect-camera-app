@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
+import {InitialScreen} from "./components/InitialScreen";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 
 /* ---------- 定数 ---------- */
@@ -16,6 +17,7 @@ export default function SimpleCamera() {
   const [current, setCurrent] = useState(0);
   const [ready, setReady] = useState(false);
   const [blendMode] = useState<"source-over">("source-over");
+  const [isNoSignalDetected, setIsNoSignalDetected] = useState(true);
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
   useEffect(() => {
@@ -94,15 +96,20 @@ export default function SimpleCamera() {
         isPreviewMode={false}
         blendMode={blendMode}
         isSwitchingCamera={false}
+        isNoSignalDetected={isNoSignalDetected}
       />
 
       <AudioReceiver
         onEffectDetected={(effectId) => {
           console.log(`SimpleCamera: エフェクト ${effectId} に切り替え`);
           setCurrent(effectId);
+          setIsNoSignalDetected(false);
         }}
         availableEffects={NUM_EFFECTS}
+        onNoSignalDetected={() => setIsNoSignalDetected(true)}
       />
+
+      <InitialScreen isVisible={isNoSignalDetected} />
     </div>
   );
 }

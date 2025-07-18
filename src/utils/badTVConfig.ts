@@ -28,7 +28,7 @@ export const badTVPresets = {
     speed: 0.1,
     rollSpeed: 0.05,
     chromaticAberration: 0.2,
-    interlaceIntensity: 0.1,
+    interlaceIntensity: 1.0, // インターレース効果を無効化（1.0 = 100%明度）
     interlaceLineWidth: 1.0,
   },
   moderate: {
