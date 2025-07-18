@@ -25,6 +25,9 @@ interface CameraCanvasProps {
   blendMode?: BlendMode;
   isSwitchingCamera?: boolean;
   isNoSignalDetected?: boolean;
+  cameraMode?: "signal" | "manual";
+  onEffectChange?: (effect: number) => void;
+  numEffects?: number;
 }
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
@@ -36,6 +39,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   blendMode = "source-over",
   isSwitchingCamera = false,
   isNoSignalDetected = false,
+  cameraMode = "signal",
+  onEffectChange,
+  numEffects = 8,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -48,6 +54,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [showTapFeedback, setShowTapFeedback] = useState(false);
 
   // モバイルデバイス検出
   useEffect(() => {
@@ -64,6 +71,18 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       setEffectTextOpacity(0);
     }
   }, [current, ready, isPreviewMode]);
+
+  // タップハンドラー
+  const handleCanvasTap = () => {
+    if (cameraMode === "manual" && onEffectChange && !isPreviewMode) {
+      const nextEffect = (current + 1) % numEffects;
+      onEffectChange(nextEffect);
+
+      // タップフィードバックを表示
+      setShowTapFeedback(true);
+      setTimeout(() => setShowTapFeedback(false), 300);
+    }
+  };
 
   // WebGL初期化
   const initializeWebGL = () => {
@@ -564,6 +583,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     blendMode,
     isSwitchingCamera,
     isNoSignalDetected,
+    cameraMode,
+    onEffectChange,
+    numEffects,
   ]);
 
   return (
@@ -578,6 +600,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           height: "100%",
           objectFit: "contain",
         }}
+        onClick={handleCanvasTap}
       />
 
       <div
@@ -616,6 +639,40 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           {getEffectName(current)}
         </div>
       )}
+
+      {/* タップフィードバック */}
+      {showTapFeedback && cameraMode === "manual" && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "100px",
+            height: "100px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(255, 255, 255, 0.3)",
+            pointerEvents: "none",
+            zIndex: 15,
+            animation: "tapFeedback 0.3s ease-out",
+          }}
+        />
+      )}
+
+      <style>
+        {`
+          @keyframes tapFeedback {
+            0% {
+              transform: translate(-50%, -50%) scale(0);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(-50%, -50%) scale(2);
+              opacity: 0;
+            }
+          }
+        `}
+      </style>
     </>
   );
 };

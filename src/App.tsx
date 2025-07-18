@@ -8,6 +8,7 @@ import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InstallPrompt} from "./components/InstallPrompt";
 import {InitialScreen} from "./components/InitialScreen";
+import {HamburgerMenu, type CameraMode} from "./components/HamburgerMenu";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 
@@ -42,6 +43,7 @@ function FullCameraApp() {
     useState<(typeof BLEND_MODES)[number]["value"]>("source-over");
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
+  const [cameraMode, setCameraMode] = useState<CameraMode>("signal"); // デフォルトは信号同期モード
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -185,12 +187,35 @@ function FullCameraApp() {
   };
 
   const handleEffectDetected = (effectId: number) => {
-    setCurrent(effectId);
-    setIsNoSignalDetected(false); // エフェクトが検出されたら信号なし状態を解除
+    // 信号同期モードの場合のみエフェクトを切り替え
+    if (cameraMode === "signal") {
+      setCurrent(effectId);
+      setIsNoSignalDetected(false); // エフェクトが検出されたら信号なし状態を解除
+    }
   };
 
   const handleNoSignalDetected = () => {
-    setIsNoSignalDetected(true); // 信号が検出されていない状態に設定
+    // 信号同期モードの場合のみ信号なし状態を設定
+    if (cameraMode === "signal") {
+      setIsNoSignalDetected(true); // 信号が検出されていない状態に設定
+    }
+  };
+
+  const handleModeChange = (mode: CameraMode) => {
+    setCameraMode(mode);
+    if (mode === "manual") {
+      // 手動モードに切り替えた時はデフォルトエフェクトを0に設定
+      setCurrent(0);
+      setIsNoSignalDetected(false); // 手動モードでは信号なし状態を解除
+    } else {
+      // 信号同期モードに切り替えた時は初期状態に戻す
+      setCurrent(-1);
+      setIsNoSignalDetected(true);
+    }
+  };
+
+  const handleEffectChange = (effect: number) => {
+    setCurrent(effect);
   };
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
@@ -273,6 +298,9 @@ function FullCameraApp() {
             blendMode={blendMode}
             isSwitchingCamera={isSwitchingCamera}
             isNoSignalDetected={isNoSignalDetected}
+            cameraMode={cameraMode}
+            onEffectChange={handleEffectChange}
+            numEffects={NUM_EFFECTS}
           />
 
           <AudioReceiver
@@ -281,8 +309,19 @@ function FullCameraApp() {
             onNoSignalDetected={handleNoSignalDetected}
           />
 
-          {/* 初期画面 - 信号が検出されていない時のみ表示 */}
-          <InitialScreen isVisible={isNoSignalDetected} />
+          {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
+          <InitialScreen
+            isVisible={cameraMode === "signal" && isNoSignalDetected}
+          />
+
+          {/* ハンバーガーメニュー */}
+          <HamburgerMenu
+            currentMode={cameraMode}
+            onModeChange={handleModeChange}
+            currentEffect={current}
+            onEffectChange={handleEffectChange}
+            numEffects={NUM_EFFECTS}
+          />
 
           <div
             className="controls"
