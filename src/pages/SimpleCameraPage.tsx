@@ -1,8 +1,9 @@
 import {useState, useEffect} from "react";
 import SimpleCamera from "../SimpleCamera";
+import {isIOSBrowser} from "../utils/deviceDetection";
 
 export default function SimpleCameraPage() {
-  const [showPermissionModal, setShowPermissionModal] = useState(true);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
 
   const requestPermissions = async () => {
@@ -30,6 +31,17 @@ export default function SimpleCameraPage() {
       );
     }
   }, [permissionsGranted]);
+
+  // iOSブラウザの場合は権限プロンプトを表示
+  useEffect(() => {
+    if (isIOSBrowser()) {
+      console.log("iOSブラウザを検出: 権限プロンプトを表示");
+      setShowPermissionModal(true);
+    } else {
+      // その他のブラウザでは従来通り自動的に権限を要求
+      requestPermissions();
+    }
+  }, []);
 
   return (
     <div

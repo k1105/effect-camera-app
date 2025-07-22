@@ -6,11 +6,11 @@ import {EffectSelector} from "./components/EffectSelector";
 import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
-import {InstallPrompt} from "./components/InstallPrompt";
 import {InitialScreen} from "./components/InitialScreen";
 import {HamburgerMenu, type CameraMode} from "./components/HamburgerMenu";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
+import {isIOSBrowser} from "./utils/deviceDetection";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -44,6 +44,8 @@ function FullCameraApp() {
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
   const [cameraMode, setCameraMode] = useState<CameraMode>("signal"); // デフォルトは信号同期モード
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -218,48 +220,96 @@ function FullCameraApp() {
     setCurrent(effect);
   };
 
+  // 権限要求関数
+  const requestPermissions = async () => {
+    try {
+      console.log("権限要求開始");
+      // カメラとマイクの許可を要求
+      await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment",
+          width: {ideal: 3840},
+          height: {ideal: 2160},
+          frameRate: {ideal: 30},
+          zoom: zoom,
+        },
+        audio: {
+          sampleRate: 44100,
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+
+      console.log("権限が許可されました");
+      setPermissionsGranted(true);
+      setShowPermissionPrompt(false);
+
+      // 権限が許可された後に初期化を実行
+      await initializeCamera();
+    } catch (error) {
+      console.error("権限の取得に失敗しました:", error);
+      setShowPermissionPrompt(false);
+    }
+  };
+
+  // カメラ初期化関数
+  const initializeCamera = async () => {
+    try {
+      /* -- a) カメラ -- */
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment",
+          width: {ideal: 3840},
+          height: {ideal: 2160},
+          frameRate: {ideal: 30},
+          zoom: zoom,
+        },
+      });
+      streamRef.current = stream;
+      const vid = videoRef.current!;
+      vid.srcObject = stream;
+
+      // metadata が来てから play
+      await new Promise<void>((res) => {
+        vid.onloadedmetadata = () => res();
+      });
+      await vid.play();
+
+      // カメラの可用性とズーム機能のサポートを確認
+      await checkCameraAvailability();
+      await checkZoomSupport();
+
+      /* -- b) エフェクト画像 -- */
+      console.log("FullCameraApp: スプライトシートからエフェクト読み込み中...");
+      const imgs = await loadEffectsFromSpriteSheet();
+      setBitmaps(imgs);
+      setReady(true);
+    } catch (error) {
+      console.error("カメラ初期化に失敗しました:", error);
+    }
+  };
+
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
   useEffect(() => {
     if (initedRef.current) return;
     initedRef.current = true;
 
-    (async () => {
-      try {
-        /* -- a) カメラ -- */
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-            width: {ideal: 3840},
-            height: {ideal: 2160},
-            frameRate: {ideal: 30},
-            zoom: zoom,
-          },
-        });
-        streamRef.current = stream;
-        const vid = videoRef.current!;
-        vid.srcObject = stream;
-
-        // metadata が来てから play
-        await new Promise<void>((res) => {
-          vid.onloadedmetadata = () => res();
-        });
-        await vid.play();
-
-        // カメラの可用性とズーム機能のサポートを確認
-        await checkCameraAvailability();
-        await checkZoomSupport();
-
-        /* -- b) エフェクト画像 -- */
-        console.log(
-          "FullCameraApp: スプライトシートからエフェクト読み込み中..."
-        );
-        const imgs = await loadEffectsFromSpriteSheet();
-        setBitmaps(imgs);
-        setReady(true);
-      } catch (error) {
-        console.error("Init failed:", error);
-      }
-    })();
+    // iOSブラウザの場合は権限プロンプトを表示
+    if (isIOSBrowser()) {
+      console.log("iOSブラウザを検出: 権限プロンプトを表示");
+      setShowPermissionPrompt(true);
+    } else {
+      // その他のブラウザでは従来通り自動初期化
+      (async () => {
+        try {
+          await initializeCamera();
+        } catch (error) {
+          console.error("Init failed:", error);
+        }
+      })();
+    }
 
     /* -- クリーンアップ -- */
     return () => {
@@ -272,7 +322,6 @@ function FullCameraApp() {
   /* ---------- UI ---------- */
   return (
     <>
-      <InstallPrompt />
       <video
         ref={videoRef}
         style={{display: "none"}}
@@ -280,6 +329,57 @@ function FullCameraApp() {
         muted
         autoPlay
       />
+
+      {/* 権限要求プロンプト */}
+      {showPermissionPrompt && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "40px",
+              borderRadius: "10px",
+              textAlign: "center",
+              maxWidth: "400px",
+            }}
+          >
+            <h2 style={{marginBottom: "20px", color: "#333"}}>
+              カメラとマイクの許可が必要です
+            </h2>
+            <p style={{marginBottom: "30px", color: "#666", lineHeight: "1.5"}}>
+              このアプリケーションではカメラとマイクを使用します。
+              <br />
+              それぞれ許可してください。
+            </p>
+            <button
+              onClick={requestPermissions}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: "#4CAF50",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                fontSize: "16px",
+                cursor: "pointer",
+              }}
+            >
+              許可する
+            </button>
+          </div>
+        </div>
+      )}
 
       {isPreviewMode && previewImage ? (
         <PreviewScreen
@@ -307,11 +407,14 @@ function FullCameraApp() {
             onEffectDetected={handleEffectDetected}
             availableEffects={NUM_EFFECTS}
             onNoSignalDetected={handleNoSignalDetected}
+            permissionsGranted={permissionsGranted}
           />
 
           {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
           <InitialScreen
             isVisible={cameraMode === "signal" && isNoSignalDetected}
+            onRequestPermissions={requestPermissions}
+            showPermissionRequest={isIOSBrowser() && !permissionsGranted}
           />
 
           {/* ハンバーガーメニュー */}

@@ -1,15 +1,90 @@
 import {useEffect, useState} from "react";
 import aspLogo from "../assets/asp-logo.png";
 
-interface InitialScreenProps {
-  isVisible: boolean;
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
 }
 
-export const InitialScreen: React.FC<InitialScreenProps> = ({isVisible}) => {
+interface InitialScreenProps {
+  isVisible: boolean;
+  onRequestPermissions?: () => void;
+  showPermissionRequest?: boolean;
+}
+
+export const InitialScreen: React.FC<InitialScreenProps> = ({
+  isVisible,
+  onRequestPermissions,
+  showPermissionRequest = false,
+}) => {
   const [logoScale, setLogoScale] = useState(1);
   const [logoOpacity, setLogoOpacity] = useState(0);
   const [textOpacity, setTextOpacity] = useState(0);
   const [pulseOpacity, setPulseOpacity] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  // PWAインストールプロンプトの処理
+  useEffect(() => {
+    // PWAが既にインストールされているかチェック
+    if (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as {standalone?: boolean}).standalone ===
+        true
+    ) {
+      setIsInstalled(true);
+      return;
+    }
+
+    // beforeinstallpromptイベントをリッスン
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      // 少し遅延させてからプロンプトを表示
+      setTimeout(() => setShowInstallPrompt(true), 1000);
+    };
+
+    // appinstalledイベントをリッスン
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setShowInstallPrompt(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const {outcome} = await deferredPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      console.log("PWAがインストールされました");
+      setIsInstalled(true);
+    } else {
+      console.log("PWAのインストールがキャンセルされました");
+    }
+
+    setDeferredPrompt(null);
+    setShowInstallPrompt(false);
+  };
 
   // アニメーション効果
   useEffect(() => {
@@ -166,7 +241,8 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({isVisible}) => {
         <div
           style={{
             position: "absolute",
-            bottom: "60px",
+            bottom:
+              showPermissionRequest || showInstallPrompt ? "200px" : "60px",
             left: "50%",
             transform: "translateX(-50%)",
             textAlign: "center",
@@ -189,6 +265,207 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({isVisible}) => {
           </p>
         </div>
       </div>
+
+      {/* 権限要求UI */}
+      {showPermissionRequest && onRequestPermissions && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: showInstallPrompt ? "120px" : "60px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "16px",
+            padding: "20px",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            maxWidth: "320px",
+            width: "90%",
+            zIndex: 3,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "16px",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+              }}
+            >
+              📹
+            </div>
+            <div>
+              <h3
+                style={{
+                  margin: "0 0 4px 0",
+                  fontSize: "16px",
+                  color: "#fff",
+                  fontWeight: "600",
+                }}
+              >
+                カメラとマイクの許可
+              </h3>
+              <p
+                style={{
+                  margin: "0",
+                  fontSize: "14px",
+                  color: "#ccc",
+                  lineHeight: "1.4",
+                }}
+              >
+                このサイトではカメラとマイクを使用します
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onRequestPermissions}
+            style={{
+              width: "100%",
+              backgroundColor: "#007AFF",
+              color: "white",
+              border: "none",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#0056CC";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#007AFF";
+            }}
+          >
+            許可する
+          </button>
+        </div>
+      )}
+
+      {/* PWAインストール促進UI */}
+      {showInstallPrompt && !isInstalled && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "60px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "16px",
+            padding: "20px",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            maxWidth: "320px",
+            width: "90%",
+            zIndex: 3,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "16px",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+              }}
+            >
+              📱
+            </div>
+            <div>
+              <h3
+                style={{
+                  margin: "0 0 4px 0",
+                  fontSize: "16px",
+                  color: "#fff",
+                  fontWeight: "600",
+                }}
+              >
+                アプリをインストール
+              </h3>
+              <p
+                style={{
+                  margin: "0",
+                  fontSize: "14px",
+                  color: "#ccc",
+                  lineHeight: "1.4",
+                }}
+              >
+                ホーム画面に追加して、より快適に使用できます
+              </p>
+            </div>
+          </div>
+          <div style={{display: "flex", gap: "8px"}}>
+            <button
+              onClick={handleInstallClick}
+              style={{
+                flex: 1,
+                backgroundColor: "#007AFF",
+                color: "white",
+                border: "none",
+                padding: "12px 20px",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "background-color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#0056CC";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#007AFF";
+              }}
+            >
+              インストール
+            </button>
+            <button
+              onClick={() => setShowInstallPrompt(false)}
+              style={{
+                backgroundColor: "transparent",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                padding: "12px 20px",
+                borderRadius: "8px",
+                fontSize: "14px",
+                cursor: "pointer",
+                transition: "border-color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.5)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)";
+              }}
+            >
+              後で
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CSS アニメーション */}
       <style>

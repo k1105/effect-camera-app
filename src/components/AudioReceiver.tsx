@@ -16,6 +16,7 @@ interface AudioReceiverProps {
   onEffectDetected: (effectId: number) => void;
   availableEffects: number; // 利用可能なエフェクトの数を追加
   onNoSignalDetected?: () => void; // 信号が検出されていない状態を通知
+  permissionsGranted?: boolean; // 権限が許可されているかどうか
 }
 
 // WebKitAudioContextの型定義
@@ -29,6 +30,7 @@ export function AudioReceiver({
   onEffectDetected,
   availableEffects,
   onNoSignalDetected,
+  permissionsGranted = false,
 }: AudioReceiverProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -250,6 +252,14 @@ export function AudioReceiver({
   useEffect(() => {
     console.log("AudioReceiver: 受信開始");
 
+    // 権限が許可されている場合のみ受信開始
+    if (!permissionsGranted) {
+      console.log(
+        "AudioReceiver: 権限が許可されていないため、受信を開始しません"
+      );
+      return;
+    }
+
     // 少し遅延させてから受信開始
     const timer = setTimeout(() => {
       startReceiving();
@@ -267,7 +277,7 @@ export function AudioReceiver({
         audioContextRef.current.close();
       }
     };
-  }, []);
+  }, [permissionsGranted]);
 
   return null; // UIを表示しない
 }

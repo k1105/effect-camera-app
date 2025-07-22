@@ -107,6 +107,7 @@ export default function SimpleCamera() {
         }}
         availableEffects={NUM_EFFECTS}
         onNoSignalDetected={() => setIsNoSignalDetected(true)}
+        permissionsGranted={true} // SimpleCameraPageで権限が許可された後にマウントされるため
       />
 
       <InitialScreen isVisible={isNoSignalDetected} />

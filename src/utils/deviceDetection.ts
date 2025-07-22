@@ -27,6 +27,27 @@ export const isMobileDevice = (): boolean => {
   return isMobileByUserAgent || isMobileByScreen || isMobileByTouch;
 };
 
+// iOS Chromeの検出
+export const isIOSChrome = (): boolean => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  return (
+    userAgent.includes("iphone") ||
+    userAgent.includes("ipad") ||
+    userAgent.includes("ipod")
+  );
+};
+
+// Safariの検出
+export const isSafari = (): boolean => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  return userAgent.includes("safari") && !userAgent.includes("chrome");
+};
+
+// iOS ChromeかSafariかどうかの検出
+export const isIOSBrowser = (): boolean => {
+  return isIOSChrome() || isSafari();
+};
+
 // WebGLサポートチェック
 export const isWebGLSupported = (): boolean => {
   try {
