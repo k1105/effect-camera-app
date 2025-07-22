@@ -8,16 +8,67 @@ export default function SimpleCameraPage() {
 
   const requestPermissions = async () => {
     try {
+      // iOS Chrome用の保守的な制約
+      const constraints = isIOSBrowser()
+        ? {
+            video: {
+              facingMode: "environment",
+              width: {ideal: 1280, max: 1920},
+              height: {ideal: 720, max: 1080},
+              frameRate: {ideal: 30, max: 30},
+            },
+            audio: {
+              sampleRate: 44100,
+              channelCount: 1,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          }
+        : {
+            video: true,
+            audio: true,
+          };
+
+      console.log("SimpleCameraPage: 使用する制約:", constraints);
+
       // カメラとマイクの許可を要求
-      await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      await navigator.mediaDevices.getUserMedia(constraints);
 
       setPermissionsGranted(true);
       setShowPermissionModal(false);
     } catch (error) {
       console.error("権限の取得に失敗しました:", error);
+
+      // エラーの詳細をログ出力
+      if (error instanceof Error) {
+        console.error("エラー名:", error.name);
+        console.error("エラーメッセージ:", error.message);
+      }
+
+      // iOS Chromeの場合、より基本的な制約で再試行
+      if (
+        isIOSBrowser() &&
+        error instanceof Error &&
+        error.name === "NotAllowedError"
+      ) {
+        console.log("SimpleCameraPage: iOS Chrome用の基本制約で再試行");
+        try {
+          const basicConstraints = {
+            video: true,
+            audio: true,
+          };
+
+          await navigator.mediaDevices.getUserMedia(basicConstraints);
+          console.log("SimpleCameraPage: 基本制約での権限取得に成功");
+          setPermissionsGranted(true);
+          setShowPermissionModal(false);
+          return;
+        } catch (retryError) {
+          console.error("SimpleCameraPage: 再試行も失敗:", retryError);
+        }
+      }
+
       // エラーが発生してもモーダルを閉じる（ユーザーが拒否した場合など）
       setShowPermissionModal(false);
     }

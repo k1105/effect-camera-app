@@ -224,23 +224,45 @@ function FullCameraApp() {
   const requestPermissions = async () => {
     try {
       console.log("権限要求開始");
+
+      // iOS Chrome用の保守的な制約
+      const constraints = isIOSBrowser()
+        ? {
+            video: {
+              facingMode: "environment",
+              width: {ideal: 1280, max: 1920},
+              height: {ideal: 720, max: 1080},
+              frameRate: {ideal: 30, max: 30},
+            },
+            audio: {
+              sampleRate: 44100,
+              channelCount: 1,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          }
+        : {
+            video: {
+              facingMode: "environment",
+              width: {ideal: 3840},
+              height: {ideal: 2160},
+              frameRate: {ideal: 30},
+              zoom: zoom,
+            },
+            audio: {
+              sampleRate: 44100,
+              channelCount: 1,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          };
+
+      console.log("使用する制約:", constraints);
+
       // カメラとマイクの許可を要求
-      await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: {ideal: 3840},
-          height: {ideal: 2160},
-          frameRate: {ideal: 30},
-          zoom: zoom,
-        },
-        audio: {
-          sampleRate: 44100,
-          channelCount: 1,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
+      await navigator.mediaDevices.getUserMedia(constraints);
 
       console.log("権限が許可されました");
       setPermissionsGranted(true);
@@ -250,6 +272,37 @@ function FullCameraApp() {
       await initializeCamera();
     } catch (error) {
       console.error("権限の取得に失敗しました:", error);
+
+      // エラーの詳細をログ出力
+      if (error instanceof Error) {
+        console.error("エラー名:", error.name);
+        console.error("エラーメッセージ:", error.message);
+      }
+
+      // iOS Chromeの場合、より基本的な制約で再試行
+      if (
+        isIOSBrowser() &&
+        error instanceof Error &&
+        error.name === "NotAllowedError"
+      ) {
+        console.log("iOS Chrome用の基本制約で再試行");
+        try {
+          const basicConstraints = {
+            video: true,
+            audio: true,
+          };
+
+          await navigator.mediaDevices.getUserMedia(basicConstraints);
+          console.log("基本制約での権限取得に成功");
+          setPermissionsGranted(true);
+          setShowPermissionPrompt(false);
+          await initializeCamera();
+          return;
+        } catch (retryError) {
+          console.error("再試行も失敗:", retryError);
+        }
+      }
+
       setShowPermissionPrompt(false);
     }
   };
@@ -258,15 +311,30 @@ function FullCameraApp() {
   const initializeCamera = async () => {
     try {
       /* -- a) カメラ -- */
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: {ideal: 3840},
-          height: {ideal: 2160},
-          frameRate: {ideal: 30},
-          zoom: zoom,
-        },
-      });
+      const cameraConstraints = isIOSBrowser()
+        ? {
+            video: {
+              facingMode: "environment",
+              width: {ideal: 1280, max: 1920},
+              height: {ideal: 720, max: 1080},
+              frameRate: {ideal: 30, max: 30},
+            },
+          }
+        : {
+            video: {
+              facingMode: "environment",
+              width: {ideal: 3840},
+              height: {ideal: 2160},
+              frameRate: {ideal: 30},
+              zoom: zoom,
+            },
+          };
+
+      console.log("カメラ初期化用制約:", cameraConstraints);
+
+      const stream = await navigator.mediaDevices.getUserMedia(
+        cameraConstraints
+      );
       streamRef.current = stream;
       const vid = videoRef.current!;
       vid.srcObject = stream;
