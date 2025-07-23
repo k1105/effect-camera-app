@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import aspLogo from "../assets/asp-logo.png";
+import "./InitialScreen.css";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -29,6 +30,21 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({
     useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+  // 画面サイズの監視
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerHeight < 600);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+    };
+  }, []);
 
   // PWAインストールプロンプトの処理
   useEffect(() => {
@@ -118,47 +134,30 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({
 
   if (!isVisible) return null;
 
+  // 動的な位置調整 - svhを使用してモバイルブラウザの動的ビューポートに対応
+  const getDescriptionBottom = () => {
+    if (showPermissionRequest || showInstallPrompt) {
+      return isSmallScreen ? "max(120px, 15svh)" : "max(200px, 20svh)";
+    }
+    return isSmallScreen ? "max(40px, 5svh)" : "max(60px, 8svh)";
+  };
+
+  const getPermissionBottom = () => {
+    if (showInstallPrompt) {
+      return isSmallScreen ? "max(80px, 10svh)" : "max(120px, 15svh)";
+    }
+    return isSmallScreen ? "max(20px, 3svh)" : "max(60px, 8svh)";
+  };
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "#000",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-        overflow: "hidden",
-      }}
-    >
+    <div className="initial-screen">
       {/* 背景のグラデーション効果 */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          background: "radial-gradient(circle at center, #1a1a1a 0%, #000 70%)",
-          opacity: 0.8,
-        }}
-      />
+      <div className="background-gradient" />
 
       {/* パルス効果 */}
       <div
+        className="pulse-effect"
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "400px",
-          height: "400px",
-          borderRadius: "50%",
-          border: "2px solid rgba(255, 255, 255, 0.1)",
           animation:
             pulseOpacity > 0 ? "pulse 2s ease-in-out infinite" : "none",
           opacity: pulseOpacity,
@@ -166,99 +165,35 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({
       />
 
       {/* メインコンテンツ */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 2,
-          textAlign: "center",
-        }}
-      >
+      <div className="main-content">
         {/* ASPロゴ */}
         <div
+          className="logo-container"
           style={{
-            position: "relative",
-            marginBottom: "40px",
             transform: `scale(${logoScale})`,
-            transition: "all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
             opacity: logoOpacity,
           }}
         >
-          <img
-            src={aspLogo}
-            alt="ASP Logo"
-            style={{
-              width: "200px",
-              height: "200px",
-              filter: "drop-shadow(0 0 20px rgba(255, 255, 255, 0.3))",
-            }}
-          />
-
-          {/* ロゴの光沢効果 */}
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "220px",
-              height: "220px",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)",
-              animation: "rotate 10s linear infinite",
-            }}
-          />
+          <img src={aspLogo} alt="ASP Logo" className="logo-image" />
+          <div className="logo-shine" />
         </div>
 
         {/* 信号待機インジケーター */}
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            marginTop: "30px",
-            opacity: textOpacity,
-            transition: "opacity 1s ease-in-out",
-          }}
-        >
+        <div className="signal-indicator" style={{opacity: textOpacity}}>
           {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                backgroundColor: "#fff",
-                animation: `signalPulse 1.5s ease-in-out infinite ${i * 0.2}s`,
-              }}
-            />
+            <div key={i} className="signal-dot" />
           ))}
         </div>
 
         {/* 説明テキスト */}
         <div
+          className="description-text"
           style={{
-            position: "absolute",
-            bottom:
-              showPermissionRequest || showInstallPrompt ? "200px" : "60px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            textAlign: "center",
+            bottom: getDescriptionBottom(),
             opacity: textOpacity * 0.7,
-            transition: "opacity 1s ease-in-out",
           }}
         >
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#888",
-              margin: "0",
-              lineHeight: "1.4",
-              maxWidth: "300px",
-            }}
-          >
+          <p>
             音声信号を受信すると
             <br />
             リアルタイムでエフェクトが適用されます
@@ -269,87 +204,19 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({
       {/* 権限要求UI */}
       {showPermissionRequest && onRequestPermissions && (
         <div
+          className="permission-ui"
           style={{
-            position: "absolute",
-            bottom: showInstallPrompt ? "120px" : "60px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            backdropFilter: "blur(10px)",
-            borderRadius: "16px",
-            padding: "20px",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            maxWidth: "320px",
-            width: "90%",
-            zIndex: 3,
+            bottom: getPermissionBottom(),
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "16px",
-            }}
-          >
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-              }}
-            >
-              📹
-            </div>
-            <div>
-              <h3
-                style={{
-                  margin: "0 0 4px 0",
-                  fontSize: "16px",
-                  color: "#fff",
-                  fontWeight: "600",
-                }}
-              >
-                カメラとマイクの許可
-              </h3>
-              <p
-                style={{
-                  margin: "0",
-                  fontSize: "14px",
-                  color: "#ccc",
-                  lineHeight: "1.4",
-                }}
-              >
-                このサイトではカメラとマイクを使用します
-              </p>
+          <div className="permission-header">
+            <div className="permission-icon">📹</div>
+            <div className="permission-content">
+              <h3>カメラとマイクの許可</h3>
+              <p>このサイトではカメラとマイクを使用します</p>
             </div>
           </div>
-          <button
-            onClick={onRequestPermissions}
-            style={{
-              width: "100%",
-              backgroundColor: "#007AFF",
-              color: "white",
-              border: "none",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "background-color 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#0056CC";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#007AFF";
-            }}
-          >
+          <button className="permission-button" onClick={onRequestPermissions}>
             許可する
           </button>
         </div>
@@ -357,155 +224,27 @@ export const InitialScreen: React.FC<InitialScreenProps> = ({
 
       {/* PWAインストール促進UI */}
       {showInstallPrompt && !isInstalled && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "60px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            backdropFilter: "blur(10px)",
-            borderRadius: "16px",
-            padding: "20px",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            maxWidth: "320px",
-            width: "90%",
-            zIndex: 3,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              marginBottom: "16px",
-            }}
-          >
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-              }}
-            >
-              📱
-            </div>
-            <div>
-              <h3
-                style={{
-                  margin: "0 0 4px 0",
-                  fontSize: "16px",
-                  color: "#fff",
-                  fontWeight: "600",
-                }}
-              >
-                アプリをインストール
-              </h3>
-              <p
-                style={{
-                  margin: "0",
-                  fontSize: "14px",
-                  color: "#ccc",
-                  lineHeight: "1.4",
-                }}
-              >
-                ホーム画面に追加して、より快適に使用できます
-              </p>
+        <div className="install-ui">
+          <div className="install-header">
+            <div className="install-icon">📱</div>
+            <div className="install-content">
+              <h3>アプリをインストール</h3>
+              <p>ホーム画面に追加して、より快適に使用できます</p>
             </div>
           </div>
-          <div style={{display: "flex", gap: "8px"}}>
-            <button
-              onClick={handleInstallClick}
-              style={{
-                flex: 1,
-                backgroundColor: "#007AFF",
-                color: "white",
-                border: "none",
-                padding: "12px 20px",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#0056CC";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#007AFF";
-              }}
-            >
+          <div className="install-buttons">
+            <button className="install-button" onClick={handleInstallClick}>
               インストール
             </button>
             <button
+              className="dismiss-button"
               onClick={() => setShowInstallPrompt(false)}
-              style={{
-                backgroundColor: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.3)",
-                padding: "12px 20px",
-                borderRadius: "8px",
-                fontSize: "14px",
-                cursor: "pointer",
-                transition: "border-color 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.5)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)";
-              }}
             >
               後で
             </button>
           </div>
         </div>
       )}
-
-      {/* CSS アニメーション */}
-      <style>
-        {`
-          @keyframes pulse {
-            0% {
-              transform: translate(-50%, -50%) scale(1);
-              opacity: 0.3;
-            }
-            50% {
-              transform: translate(-50%, -50%) scale(1.1);
-              opacity: 0.1;
-            }
-            100% {
-              transform: translate(-50%, -50%) scale(1);
-              opacity: 0.3;
-            }
-          }
-
-          @keyframes rotate {
-            from {
-              transform: translate(-50%, -50%) rotate(0deg);
-            }
-            to {
-              transform: translate(-50%, -50%) rotate(360deg);
-            }
-          }
-
-          @keyframes signalPulse {
-            0%, 100% {
-              opacity: 0.3;
-              transform: scale(1);
-            }
-            50% {
-              opacity: 1;
-              transform: scale(1.2);
-            }
-          }
-        `}
-      </style>
     </div>
   );
 };

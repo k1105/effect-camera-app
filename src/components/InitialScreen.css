@@ -1,0 +1,372 @@
+/* InitialScreen.css */
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes signalPulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.initial-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100svh;
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.background-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, #1a1a1a 0%, #000 70%);
+  opacity: 0.8;
+}
+
+.pulse-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  text-align: center;
+}
+
+.logo-container {
+  position: relative;
+  margin-bottom: 40px;
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.logo-image {
+  width: 200px;
+  height: 200px;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+}
+
+.logo-shine {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  animation: rotate 10s linear infinite;
+}
+
+.signal-indicator {
+  display: flex;
+  gap: 8px;
+  margin-top: 30px;
+  transition: opacity 1s ease-in-out;
+}
+
+.signal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #fff;
+}
+
+.signal-dot:nth-child(1) {
+  animation: signalPulse 1.5s ease-in-out infinite 0s;
+}
+
+.signal-dot:nth-child(2) {
+  animation: signalPulse 1.5s ease-in-out infinite 0.2s;
+}
+
+.signal-dot:nth-child(3) {
+  animation: signalPulse 1.5s ease-in-out infinite 0.4s;
+}
+
+.description-text {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  transition: opacity 1s ease-in-out;
+}
+
+.description-text p {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+  line-height: 1.4;
+  max-width: 300px;
+}
+
+.permission-ui {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-width: 320px;
+  width: 90%;
+  z-index: 3;
+  /* svhを使用してモバイルブラウザの動的ビューポートに対応 */
+  bottom: max(20px, 5svh);
+}
+
+.permission-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.permission-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.permission-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.permission-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.4;
+}
+
+.permission-button {
+  width: 100%;
+  background-color: #007aff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.permission-button:hover {
+  background-color: #0056cc;
+}
+
+.install-ui {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-width: 320px;
+  width: 90%;
+  z-index: 3;
+  /* svhを使用してモバイルブラウザの動的ビューポートに対応 */
+  bottom: max(20px, 5svh);
+}
+
+.install-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.install-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.install-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.install-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.4;
+}
+
+.install-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.install-button {
+  flex: 1;
+  background-color: #007aff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.install-button:hover {
+  background-color: #0056cc;
+}
+
+.dismiss-button {
+  background-color: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.dismiss-button:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* スマホでの調整 */
+@media (max-height: 600px) {
+  .logo-container {
+    margin-bottom: 20px;
+  }
+
+  .logo-image {
+    width: 150px;
+    height: 150px;
+  }
+
+  .logo-shine {
+    width: 170px;
+    height: 170px;
+  }
+
+  .signal-indicator {
+    margin-top: 20px;
+  }
+
+  .description-text {
+    bottom: max(10px, 3svh) !important;
+  }
+
+  .permission-ui {
+    bottom: max(10px, 3svh);
+    padding: 16px;
+  }
+
+  .install-ui {
+    bottom: max(10px, 3svh);
+    padding: 16px;
+  }
+}
+
+@media (max-height: 500px) {
+  .logo-container {
+    margin-bottom: 15px;
+  }
+
+  .logo-image {
+    width: 120px;
+    height: 120px;
+  }
+
+  .logo-shine {
+    width: 140px;
+    height: 140px;
+  }
+
+  .signal-indicator {
+    margin-top: 15px;
+  }
+
+  .description-text {
+    bottom: max(5px, 2svh) !important;
+  }
+
+  .permission-ui {
+    bottom: max(5px, 2svh);
+    padding: 12px;
+  }
+
+  .install-ui {
+    bottom: max(5px, 2svh);
+    padding: 12px;
+  }
+}
