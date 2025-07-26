@@ -40,7 +40,14 @@ export const getPsychedelicConfigForEffect = (
   // エフェクトIDに基づいて異なるプリセットを割り当て
   switch (effectId) {
     case 0:
-      return psychedelicPresets.subtle; // エフェクト0: 微細
+      // エフェクト0: Normal（エフェクトなし）- すべての値を0に設定
+      return {
+        thermalIntensity: 0.0,
+        contrastIntensity: 0.0,
+        psychedelicSpeed: 0.0,
+        channelShift: 0.0,
+        glowIntensity: 0.0,
+      };
     case 1:
       return psychedelicPresets.moderate; // エフェクト1: 中程度
     case 2:

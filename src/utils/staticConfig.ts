@@ -18,8 +18,8 @@ export const getStaticConfigForEffect = (effectId: number): StaticConfig => {
     case 0:
       return {
         ...baseConfig,
-        staticIntensity: 0.2, // 軽いスタティック
-        staticSize: 3.0,
+        staticIntensity: 0.0, // Normal（エフェクトなし）- スタティック無効
+        staticSize: 1.0,
       };
     case 1:
       return {

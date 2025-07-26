@@ -65,7 +65,16 @@ export const getBadTVConfigForEffect = (effectId: number): BadTVConfig => {
   // エフェクトIDに基づいて異なるプリセットを割り当て
   switch (effectId) {
     case 0:
-      return badTVPresets.subtle; // エフェクト0: 微細
+      // エフェクト0: Normal（エフェクトなし）- すべての値を0に設定
+      return {
+        distortion: 0.0,
+        distortion2: 0.0,
+        speed: 0.0,
+        rollSpeed: 0.0,
+        chromaticAberration: 0.0,
+        interlaceIntensity: 1.0, // インターレース効果を無効化
+        interlaceLineWidth: 1.0,
+      };
     case 1:
       return badTVPresets.moderate; // エフェクト1: 中程度
     case 2:

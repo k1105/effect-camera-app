@@ -3,7 +3,7 @@
 // エフェクト名の取得
 export const getEffectName = (effectId: number): string => {
   const effectNames = [
-    "Bad TV - Subtle",
+    "Normal",
     "Bad TV - Moderate",
     "Bad TV - Heavy",
     "Bad TV - Extreme",
@@ -18,8 +18,8 @@ export const getEffectName = (effectId: number): string => {
 // エフェクトに応じたオーバーレイ色の取得
 export const getEffectOverlayColor = (effectId: number): string => {
   switch (effectId) {
-    case 0: // Bad TV - Subtle
-      return "rgba(20, 20, 20, 0.3)"; // 暗いグレー
+    case 0: // Normal
+      return "rgba(0, 0, 0, 0)"; // 透明（エフェクトなし）
     case 1: // Bad TV - Moderate
       return "rgba(10, 10, 10, 0.5)"; // より暗いグレー
     case 2: // Bad TV - Heavy

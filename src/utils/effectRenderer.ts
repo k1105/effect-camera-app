@@ -78,8 +78,12 @@ export const calculateEffectRenderData = (
   // エフェクトIDに基づいてシェーダータイプを決定
   let effectType: EffectType = "normal";
   if (current >= 0 && current <= 7) {
-    // エフェクト0-3: Bad TV Shader
-    if (current <= 3) {
+    // エフェクト0: Normal（エフェクトなし）
+    if (current === 0) {
+      effectType = "normal";
+    }
+    // エフェクト1-3: Bad TV Shader
+    else if (current >= 1 && current <= 3) {
       effectType = "badTV";
     }
     // エフェクト4-7: サイケデリックシェーダー
