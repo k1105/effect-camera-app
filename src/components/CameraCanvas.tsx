@@ -15,6 +15,7 @@ import {
 } from "../utils/webglUtils";
 import {initWebGL} from "../utils/webGLInitializer";
 import {getEffectName, getEffectOverlayColor} from "../utils/effectUtils";
+import {getNextEffectIdInCategory} from "../utils/effectCategoryUtils";
 
 interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -28,6 +29,7 @@ interface CameraCanvasProps {
   cameraMode?: "signal" | "manual";
   onEffectChange?: (effect: number) => void;
   numEffects?: number;
+  currentCategory?: "normal" | "badTV" | "psychedelic";
 }
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
@@ -42,6 +44,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   cameraMode = "signal",
   onEffectChange,
   numEffects = 8,
+  currentCategory = "normal",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -75,7 +78,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   // タップハンドラー
   const handleCanvasTap = () => {
     if (cameraMode === "manual" && onEffectChange && !isPreviewMode) {
-      const nextEffect = (current + 1) % numEffects;
+      // カテゴリー内での次のエフェクトに切り替え
+      const nextEffect = getNextEffectIdInCategory(current, currentCategory);
       onEffectChange(nextEffect);
 
       // タップフィードバックを表示

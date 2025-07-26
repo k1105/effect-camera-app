@@ -3,6 +3,10 @@ import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import {CameraControls} from "./components/CameraControls";
 import {PreviewScreen} from "./components/PreviewScreen";
 import {EffectSelector} from "./components/EffectSelector";
+import {
+  EffectCategorySelector,
+  type EffectCategory,
+} from "./components/EffectCategorySelector";
 import {ZoomControl} from "./components/ZoomControl";
 import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
@@ -11,6 +15,7 @@ import {HamburgerMenu, type CameraMode} from "./components/HamburgerMenu";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {isIOSBrowser} from "./utils/deviceDetection";
+import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -44,6 +49,8 @@ function FullCameraApp() {
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
   const [cameraMode, setCameraMode] = useState<CameraMode>("signal"); // デフォルトは信号同期モード
+  const [currentCategory, setCurrentCategory] =
+    useState<EffectCategory>("normal"); // 現在のエフェクトカテゴリー
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
 
@@ -208,16 +215,32 @@ function FullCameraApp() {
     if (mode === "manual") {
       // 手動モードに切り替えた時はデフォルトエフェクトを0に設定
       setCurrent(0);
+      setCurrentCategory("normal");
       setIsNoSignalDetected(false); // 手動モードでは信号なし状態を解除
     } else {
       // 信号同期モードに切り替えた時は初期状態に戻す
       setCurrent(-1);
+      setCurrentCategory("normal");
       setIsNoSignalDetected(true);
     }
   };
 
   const handleEffectChange = (effect: number) => {
     setCurrent(effect);
+    // エフェクトIDからカテゴリーを更新
+    setCurrentCategory(getCategoryFromEffectId(effect));
+  };
+
+  const handleCategoryChange = (category: EffectCategory) => {
+    setCurrentCategory(category);
+    // カテゴリーが変更された時は、そのカテゴリーの最初のエフェクトに設定
+    if (category === "normal") {
+      setCurrent(0);
+    } else if (category === "badTV") {
+      setCurrent(1);
+    } else if (category === "psychedelic") {
+      setCurrent(4);
+    }
   };
 
   // 権限要求関数
@@ -469,6 +492,7 @@ function FullCameraApp() {
             cameraMode={cameraMode}
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
+            currentCategory={currentCategory}
           />
 
           <AudioReceiver
@@ -492,6 +516,13 @@ function FullCameraApp() {
             currentEffect={current}
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
+          />
+
+          {/* エフェクトカテゴリー選択（手動モードのみ表示） */}
+          <EffectCategorySelector
+            currentCategory={currentCategory}
+            onCategoryChange={handleCategoryChange}
+            isVisible={cameraMode === "manual"}
           />
 
           <div
