@@ -15,6 +15,8 @@ import {HamburgerMenu, type CameraMode} from "./components/HamburgerMenu";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
+import {SongTitleOverlay} from "./components/SongTitleOverlay";
+import {SongTitleDemo} from "./components/SongTitleDemo";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -52,6 +54,8 @@ function FullCameraApp() {
     useState<EffectCategory>("normal"); // 現在のエフェクトカテゴリー
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [songId, setSongId] = useState(-1); // Current song ID for overlay
+  const [showSongTitle, setShowSongTitle] = useState(false); // Flag to show/hide song title overlay
 
   /* ---------- カメラ制御関数 ---------- */
   const checkCameraAvailability = async () => {
@@ -452,6 +456,8 @@ function FullCameraApp() {
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
             currentCategory={currentCategory}
+            // songId={songId}
+            // showSongTitle={showSongTitle}
           />
 
           <AudioReceiver
@@ -459,6 +465,23 @@ function FullCameraApp() {
             availableEffects={NUM_EFFECTS}
             onNoSignalDetected={handleNoSignalDetected}
             permissionsGranted={permissionsGranted}
+          />
+
+          {/* HTML Song Title Overlay */}
+          <SongTitleOverlay
+            songId={songId}
+            isVisible={showSongTitle || (cameraMode === "signal" && !isNoSignalDetected)}
+            cameraMode={cameraMode}
+            currentId={current}
+          />
+
+          {/* Song Title Demo Controls */}
+          <SongTitleDemo
+            isVisible={cameraMode !== "signal"}
+            onSongIdChange={setSongId}
+            onShowSongTitleChange={setShowSongTitle}
+            currentSongId={songId}
+            showSongTitle={showSongTitle}
           />
 
           {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
