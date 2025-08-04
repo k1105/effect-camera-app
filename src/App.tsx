@@ -456,8 +456,8 @@ function FullCameraApp() {
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
             currentCategory={currentCategory}
-            songId={songId}
-            showSongTitle={showSongTitle}
+            // songId={songId}
+            // showSongTitle={showSongTitle}
           />
 
           <AudioReceiver

@@ -16,7 +16,7 @@ import {
 import {initWebGL} from "../utils/webGLInitializer";
 import {getEffectName, getEffectOverlayColor} from "../utils/effectUtils";
 import {getNextEffectIdInCategory} from "../utils/effectCategoryUtils";
-import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
+// import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
 interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -48,8 +48,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   onEffectChange,
   numEffects = 8,
   currentCategory = "normal",
-  songId = -1,
-  showSongTitle = false,
+  // songId = -1,
+  // showSongTitle = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
