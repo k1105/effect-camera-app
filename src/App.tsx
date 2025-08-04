@@ -511,13 +511,14 @@ function FullCameraApp() {
           {/* HTML Song Title Overlay */}
           <SongTitleOverlay
             songId={songId}
-            isVisible={showSongTitle}
+            isVisible={showSongTitle || cameraMode === "signal"}
             cameraMode={cameraMode}
             currentId={current}
           />
 
           {/* Song Title Demo Controls */}
           <SongTitleDemo
+            isVisible={cameraMode !== "signal"}
             onSongIdChange={setSongId}
             onShowSongTitleChange={setShowSongTitle}
             currentSongId={songId}

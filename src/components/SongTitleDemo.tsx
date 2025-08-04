@@ -5,6 +5,7 @@ interface SongTitleDemoProps {
   onShowSongTitleChange: (show: boolean) => void;
   currentSongId: number;
   showSongTitle: boolean;
+  isVisible: boolean;
 }
 
 const SONG_NAMES = [
@@ -31,6 +32,7 @@ export const SongTitleDemo: React.FC<SongTitleDemoProps> = ({
   onShowSongTitleChange,
   currentSongId,
   showSongTitle,
+  isVisible
 }) => {
   const [selectedSongId, setSelectedSongId] = useState(currentSongId);
 
@@ -42,6 +44,8 @@ export const SongTitleDemo: React.FC<SongTitleDemoProps> = ({
   const handleToggleOverlay = () => {
     onShowSongTitleChange(!showSongTitle);
   };
+
+  if(!isVisible) return null;
 
   return (
     <div

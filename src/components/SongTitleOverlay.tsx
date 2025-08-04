@@ -34,8 +34,10 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
   currentId
 }) => {
   const [showImage, setShowImage] = useState(false);
-
+  const isManualMode = cameraMode === "manual" ? songId < 0 || songId >= SONG_TITLES.length : false;
+  const imagePath = cameraMode === 'signal' ? `/assets/song_title/${SONG_TITLES[currentId]}.png` : `/assets/song_title/${SONG_TITLES[songId]}.png`;
   useEffect(() => {
+    console.log("isVisible: " , isVisible);
     if (!isVisible) {
       setShowImage(false);
       return;
@@ -61,14 +63,12 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
       clearInterval(interval);
       setShowImage(false);
     };
-  }, [isVisible]);
+  }, [isVisible, songId, currentId]);
 
-  if (!isVisible || !showImage || songId < 0 || songId >= SONG_TITLES.length) {
+  if (!isVisible || !showImage || isManualMode) {
     return null;
   }
 
-  const imageName = SONG_TITLES[songId];
-  const imagePath = cameraMode !== 'signal' ? `/assets/song_title/${imageName}.png` : `/assets/song_title/${currentId}.png`;
 
   return (
     <div
