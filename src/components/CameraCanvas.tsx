@@ -16,6 +16,7 @@ import {
 import {initWebGL} from "../utils/webGLInitializer";
 import {getEffectName, getEffectOverlayColor} from "../utils/effectUtils";
 import {getNextEffectIdInCategory} from "../utils/effectCategoryUtils";
+import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
 interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -30,6 +31,8 @@ interface CameraCanvasProps {
   onEffectChange?: (effect: number) => void;
   numEffects?: number;
   currentCategory?: "normal" | "badTV" | "psychedelic";
+  songId?: number; // Add song ID for overlay
+  showSongTitle?: boolean; // Add flag to show/hide song title
 }
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
@@ -45,6 +48,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   onEffectChange,
   numEffects = 8,
   currentCategory = "normal",
+  songId = -1,
+  showSongTitle = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -677,6 +682,14 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           }
         `}
       </style>
+
+      {/* Song Title Canvas Overlay うまく機能しない
+      <SongTitleCanvasOverlay
+        songId={songId}
+        isVisible={showSongTitle}
+        canvasRef={canvasRef}
+        gl={glRef.current}
+      /> */}
     </>
   );
 };

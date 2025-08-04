@@ -2,7 +2,7 @@ import {useEffect, useRef} from "react";
 
 // システム設定
 const CONFIG = {
-  BASE_FREQ: 17000, // 基本周波数
+  BASE_FREQ: 18000, // 基本周波数
   FREQ_RANGE: 2000, // 周波数範囲
   NUM_CHANNELS: 32, // チャンネル数
   SIGNAL_DURATION: 1.0, // 信号長（秒）
