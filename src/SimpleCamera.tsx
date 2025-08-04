@@ -3,7 +3,6 @@ import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InitialScreen} from "./components/InitialScreen";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
-import {isIOSBrowser} from "./utils/deviceDetection";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -32,23 +31,14 @@ export default function SimpleCamera() {
         /* -- a) カメラ -- */
         console.log("SimpleCamera: カメラアクセス要求中...");
 
-        const cameraConstraints = isIOSBrowser()
-          ? {
-              video: {
-                facingMode: "environment",
-                width: {ideal: 1280, max: 1920},
-                height: {ideal: 720, max: 1080},
-                frameRate: {ideal: 30, max: 30},
-              },
-            }
-          : {
-              video: {
-                facingMode: "environment",
-                width: {ideal: 3840},
-                height: {ideal: 2160},
-                frameRate: {ideal: 30},
-              },
-            };
+        const cameraConstraints = {
+          video: {
+            facingMode: "environment",
+            width: {ideal: 3840},
+            height: {ideal: 2160},
+            frameRate: {ideal: 30},
+          },
+        };
 
         console.log("SimpleCamera: 使用する制約:", cameraConstraints);
 

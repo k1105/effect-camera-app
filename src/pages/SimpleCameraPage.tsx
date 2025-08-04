@@ -1,6 +1,5 @@
 import {useState, useEffect} from "react";
 import SimpleCamera from "../SimpleCamera";
-import {isIOSBrowser} from "../utils/deviceDetection";
 
 export default function SimpleCameraPage() {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -8,27 +7,22 @@ export default function SimpleCameraPage() {
 
   const requestPermissions = async () => {
     try {
-      // iOS Chrome用の保守的な制約
-      const constraints = isIOSBrowser()
-        ? {
-            video: {
-              facingMode: "environment",
-              width: {ideal: 1280, max: 1920},
-              height: {ideal: 720, max: 1080},
-              frameRate: {ideal: 30, max: 30},
-            },
-            audio: {
-              sampleRate: 44100,
-              channelCount: 1,
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            },
-          }
-        : {
-            video: true,
-            audio: true,
-          };
+      // 基本制約で権限を要求
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: {ideal: 3840},
+          height: {ideal: 2160},
+          frameRate: {ideal: 30},
+        },
+        audio: {
+          sampleRate: 44100,
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      };
 
       console.log("SimpleCameraPage: 使用する制約:", constraints);
 
@@ -46,13 +40,9 @@ export default function SimpleCameraPage() {
         console.error("エラーメッセージ:", error.message);
       }
 
-      // iOS Chromeの場合、より基本的な制約で再試行
-      if (
-        isIOSBrowser() &&
-        error instanceof Error &&
-        error.name === "NotAllowedError"
-      ) {
-        console.log("SimpleCameraPage: iOS Chrome用の基本制約で再試行");
+      // より基本的な制約で再試行
+      if (error instanceof Error && error.name === "NotAllowedError") {
+        console.log("SimpleCameraPage: 基本制約で再試行");
         try {
           const basicConstraints = {
             video: true,
@@ -83,15 +73,10 @@ export default function SimpleCameraPage() {
     }
   }, [permissionsGranted]);
 
-  // iOSブラウザの場合は権限プロンプトを表示
+  // 全てのブラウザで権限プロンプトを表示
   useEffect(() => {
-    if (isIOSBrowser()) {
-      console.log("iOSブラウザを検出: 権限プロンプトを表示");
-      setShowPermissionModal(true);
-    } else {
-      // その他のブラウザでは従来通り自動的に権限を要求
-      requestPermissions();
-    }
+    console.log("権限プロンプトを表示");
+    setShowPermissionModal(true);
   }, []);
 
   return (

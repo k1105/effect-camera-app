@@ -14,7 +14,6 @@ import {InitialScreen} from "./components/InitialScreen";
 import {HamburgerMenu, type CameraMode} from "./components/HamburgerMenu";
 import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
-import {isIOSBrowser} from "./utils/deviceDetection";
 import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
 import {SongTitleOverlay} from "./components/SongTitleOverlay";
 import {SongTitleDemo} from "./components/SongTitleDemo";
@@ -252,39 +251,23 @@ function FullCameraApp() {
     try {
       console.log("権限要求開始");
 
-      // iOS Chrome用の保守的な制約
-      const constraints = isIOSBrowser()
-        ? {
-            video: {
-              facingMode: "environment",
-              width: {ideal: 1280, max: 1920},
-              height: {ideal: 720, max: 1080},
-              frameRate: {ideal: 30, max: 30},
-            },
-            audio: {
-              sampleRate: 44100,
-              channelCount: 1,
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            },
-          }
-        : {
-            video: {
-              facingMode: "environment",
-              width: {ideal: 3840},
-              height: {ideal: 2160},
-              frameRate: {ideal: 30},
-              zoom: zoom,
-            },
-            audio: {
-              sampleRate: 44100,
-              channelCount: 1,
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            },
-          };
+      // 基本制約で権限を要求
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: {ideal: 3840},
+          height: {ideal: 2160},
+          frameRate: {ideal: 30},
+          zoom: zoom,
+        },
+        audio: {
+          sampleRate: 44100,
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      };
 
       console.log("使用する制約:", constraints);
 
@@ -306,13 +289,9 @@ function FullCameraApp() {
         console.error("エラーメッセージ:", error.message);
       }
 
-      // iOS Chromeの場合、より基本的な制約で再試行
-      if (
-        isIOSBrowser() &&
-        error instanceof Error &&
-        error.name === "NotAllowedError"
-      ) {
-        console.log("iOS Chrome用の基本制約で再試行");
+      // より基本的な制約で再試行
+      if (error instanceof Error && error.name === "NotAllowedError") {
+        console.log("基本制約で再試行");
         try {
           const basicConstraints = {
             video: true,
@@ -338,24 +317,15 @@ function FullCameraApp() {
   const initializeCamera = async () => {
     try {
       /* -- a) カメラ -- */
-      const cameraConstraints = isIOSBrowser()
-        ? {
-            video: {
-              facingMode: "environment",
-              width: {ideal: 1280, max: 1920},
-              height: {ideal: 720, max: 1080},
-              frameRate: {ideal: 30, max: 30},
-            },
-          }
-        : {
-            video: {
-              facingMode: "environment",
-              width: {ideal: 3840},
-              height: {ideal: 2160},
-              frameRate: {ideal: 30},
-              zoom: zoom,
-            },
-          };
+      const cameraConstraints = {
+        video: {
+          facingMode: "environment",
+          width: {ideal: 3840},
+          height: {ideal: 2160},
+          frameRate: {ideal: 30},
+          zoom: zoom,
+        },
+      };
 
       console.log("カメラ初期化用制約:", cameraConstraints);
 
@@ -391,20 +361,9 @@ function FullCameraApp() {
     if (initedRef.current) return;
     initedRef.current = true;
 
-    // iOSブラウザの場合は権限プロンプトを表示
-    if (isIOSBrowser()) {
-      console.log("iOSブラウザを検出: 権限プロンプトを表示");
-      setShowPermissionPrompt(true);
-    } else {
-      // その他のブラウザでは従来通り自動初期化
-      (async () => {
-        try {
-          await initializeCamera();
-        } catch (error) {
-          console.error("Init failed:", error);
-        }
-      })();
-    }
+    // 全てのブラウザで権限プロンプトを表示
+    console.log("権限プロンプトを表示");
+    setShowPermissionPrompt(true);
 
     /* -- クリーンアップ -- */
     return () => {
@@ -529,7 +488,7 @@ function FullCameraApp() {
           <InitialScreen
             isVisible={cameraMode === "signal" && isNoSignalDetected}
             onRequestPermissions={requestPermissions}
-            showPermissionRequest={isIOSBrowser() && !permissionsGranted}
+            showPermissionRequest={!permissionsGranted}
           />
 
           {/* ハンバーガーメニュー */}
