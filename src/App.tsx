@@ -1,6 +1,5 @@
 import {useEffect, useRef, useState} from "react";
 import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
-import {CameraControls} from "./components/CameraControls";
 import {PreviewScreen} from "./components/PreviewScreen";
 import {EffectSelector} from "./components/EffectSelector";
 import {
@@ -21,15 +20,6 @@ import {SongTitleDemo} from "./components/SongTitleDemo";
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
 
-const BLEND_MODES = [
-  {value: "source-over", label: "通常"},
-  {value: "multiply", label: "乗算"},
-  {value: "screen", label: "スクリーン"},
-  {value: "overlay", label: "オーバーレイ"},
-  {value: "soft-light", label: "ソフトライト"},
-  {value: "hard-light", label: "ハードライト"},
-] as const;
-
 function FullCameraApp() {
   /* ---------- Refs & State ---------- */
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,15 +29,10 @@ function FullCameraApp() {
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(-1); // 初期値は-1（エフェクトなし）
   const [ready, setReady] = useState(false);
-  const [isFrontCamera, setIsFrontCamera] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const [isZoomSupported, setIsZoomSupported] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [blendMode, setBlendMode] =
-    useState<(typeof BLEND_MODES)[number]["value"]>("source-over");
-  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
   const [cameraMode, setCameraMode] = useState<CameraMode>("signal"); // デフォルトは信号同期モード
   const [currentCategory, setCurrentCategory] =
@@ -58,20 +43,6 @@ function FullCameraApp() {
   const [showSongTitle, setShowSongTitle] = useState(false); // Flag to show/hide song title overlay
 
   /* ---------- カメラ制御関数 ---------- */
-  const checkCameraAvailability = async () => {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(
-        (device) => device.kind === "videoinput"
-      );
-      setHasMultipleCameras(videoDevices.length > 1);
-      return videoDevices.length > 1;
-    } catch (error) {
-      console.error("カメラの確認に失敗しました:", error);
-      return false;
-    }
-  };
-
   const checkZoomSupport = async () => {
     if (!streamRef.current) return false;
     const track = streamRef.current.getVideoTracks()[0];
@@ -81,75 +52,7 @@ function FullCameraApp() {
     return supported;
   };
 
-  const switchCamera = async () => {
-    try {
-      const canSwitch = await checkCameraAvailability();
-      if (!canSwitch) {
-        console.log("利用可能なカメラが1つしかありません");
-        return;
-      }
-
-      setIsSwitchingCamera(true);
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-
-      const newFacingMode = isFrontCamera ? "environment" : "user";
-      // インカムの場合は解像度を下げる
-      const constraints = {
-        video: {
-          facingMode: newFacingMode,
-          width: newFacingMode === "user" ? {ideal: 1280} : {ideal: 3840},
-          height: newFacingMode === "user" ? {ideal: 720} : {ideal: 2160},
-          frameRate: {ideal: 30},
-          zoom: zoom,
-        },
-      };
-
-      console.log("カメラ切り替え:", constraints);
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // 新しいストリームを設定する前に、古いストリームを確実に停止
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // 新しいストリームの準備ができるまで待機
-        await new Promise<void>((res) => {
-          videoRef.current!.onloadedmetadata = () => res();
-        });
-        await videoRef.current.play();
-      }
-
-      setIsFrontCamera(!isFrontCamera);
-
-      // ズーム機能のサポートを再確認
-      await checkZoomSupport();
-    } catch (error) {
-      console.error("カメラの切り替えに失敗しました:", error);
-      // エラーが発生した場合は元の状態を維持
-      if (streamRef.current) {
-        const currentStream = streamRef.current;
-        if (videoRef.current) {
-          videoRef.current.srcObject = currentStream;
-        }
-      }
-    } finally {
-      setIsSwitchingCamera(false);
-    }
-  };
-
   const handleZoom = async (newZoom: number) => {
-    // インカムの場合はズーム制御を無効化
-    if (isFrontCamera) {
-      console.log("インカムではズーム機能は利用できません");
-      return;
-    }
-
     if (!isZoomSupported) {
       console.log("ズーム機能はこのデバイスではサポートされていません");
       return;
@@ -255,8 +158,8 @@ function FullCameraApp() {
       const constraints = {
         video: {
           facingMode: "environment",
-          width: {ideal: 3840},
-          height: {ideal: 2160},
+          width: {ideal: 1080},
+          height: {ideal: 1920},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
@@ -320,8 +223,8 @@ function FullCameraApp() {
       const cameraConstraints = {
         video: {
           facingMode: "environment",
-          width: {ideal: 3840},
-          height: {ideal: 2160},
+          width: {ideal: 1080},
+          height: {ideal: 1920},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
@@ -342,8 +245,7 @@ function FullCameraApp() {
       });
       await vid.play();
 
-      // カメラの可用性とズーム機能のサポートを確認
-      await checkCameraAvailability();
+      // ズーム機能のサポートを確認
       await checkZoomSupport();
 
       /* -- b) エフェクト画像 -- */
@@ -449,15 +351,11 @@ function FullCameraApp() {
             current={current}
             ready={ready}
             isPreviewMode={isPreviewMode}
-            blendMode={blendMode}
-            isSwitchingCamera={isSwitchingCamera}
             isNoSignalDetected={isNoSignalDetected}
             cameraMode={cameraMode}
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
             currentCategory={currentCategory}
-            // songId={songId}
-            // showSongTitle={showSongTitle}
           />
 
           <AudioReceiver
@@ -470,7 +368,9 @@ function FullCameraApp() {
           {/* HTML Song Title Overlay */}
           <SongTitleOverlay
             songId={songId}
-            isVisible={showSongTitle || (cameraMode === "signal" && !isNoSignalDetected)}
+            isVisible={
+              showSongTitle || (cameraMode === "signal" && !isNoSignalDetected)
+            }
             cameraMode={cameraMode}
             currentId={current}
           />
@@ -531,31 +431,7 @@ function FullCameraApp() {
               onChange={setCurrent}
             />
 
-            <select
-              value={blendMode}
-              onChange={(e) => setBlendMode(e.target.value as typeof blendMode)}
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                backgroundColor: "white",
-                color: "black",
-              }}
-            >
-              {BLEND_MODES.map((mode) => (
-                <option key={mode.value} value={mode.value}>
-                  {mode.label}
-                </option>
-              ))}
-            </select>
-
-            <CameraControls
-              hasMultipleCameras={hasMultipleCameras}
-              isFrontCamera={isFrontCamera}
-              onSwitchCamera={switchCamera}
-            />
-
-            {isZoomSupported && !isFrontCamera && (
+            {isZoomSupported && (
               <ZoomControl zoom={zoom} onZoomChange={handleZoom} />
             )}
           </div>

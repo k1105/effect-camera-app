@@ -13,8 +13,6 @@ export type EffectType = "normal" | "badTV" | "psychedelic";
 export interface EffectRenderConfig {
   current: number;
   bitmaps: ImageBitmap[];
-  isSwitchingCamera: boolean;
-  blendMode: BlendMode;
   canvasWidth: number;
   canvasHeight: number;
   currentTime: number;
@@ -48,17 +46,10 @@ export const getBlendModeValue = (mode: BlendMode): number => {
 export const calculateEffectRenderData = (
   config: EffectRenderConfig
 ): EffectRenderResult => {
-  const {
-    current,
-    bitmaps,
-    isSwitchingCamera,
-    canvasWidth,
-    canvasHeight,
-    currentTime,
-  } = config;
+  const {current, bitmaps, canvasWidth, canvasHeight, currentTime} = config;
 
-  // カメラ切り替え中はエフェクトを表示しない
-  if (isSwitchingCamera || current < 0) {
+  // エフェクトが選択されていない場合は何も表示しない
+  if (current < 0) {
     return {
       positions: [],
       effectBitmap: null,

@@ -1,8 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {
-  calculateEffectRenderData,
-  type BlendMode,
-} from "../utils/effectRenderer";
+import {calculateEffectRenderData} from "../utils/effectRenderer";
 import {getBadTVConfigForEffect} from "../utils/badTVConfig";
 import {getPsychedelicConfigForEffect} from "../utils/psychedelicConfig";
 import {getStaticConfigForEffect} from "../utils/staticConfig";
@@ -24,8 +21,6 @@ interface CameraCanvasProps {
   current: number;
   ready: boolean;
   isPreviewMode: boolean;
-  blendMode?: BlendMode;
-  isSwitchingCamera?: boolean;
   isNoSignalDetected?: boolean;
   cameraMode?: "signal" | "manual";
   onEffectChange?: (effect: number) => void;
@@ -41,8 +36,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   current,
   ready,
   isPreviewMode,
-  blendMode = "source-over",
-  isSwitchingCamera = false,
   isNoSignalDetected = false,
   cameraMode = "signal",
   onEffectChange,
@@ -215,8 +208,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           const effectRenderData = calculateEffectRenderData({
             current,
             bitmaps,
-            isSwitchingCamera,
-            blendMode,
             canvasWidth: targetWidth,
             canvasHeight: targetHeight,
             currentTime,
@@ -421,8 +412,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         const effectRenderData = calculateEffectRenderData({
           current,
           bitmaps,
-          isSwitchingCamera,
-          blendMode,
           canvasWidth: targetWidth,
           canvasHeight: targetHeight,
           currentTime,
@@ -594,8 +583,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     bitmaps,
     isPreviewMode,
     videoRef,
-    blendMode,
-    isSwitchingCamera,
     isNoSignalDetected,
     cameraMode,
     onEffectChange,
