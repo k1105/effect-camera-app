@@ -388,6 +388,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     }
 
     const draw = (currentTime: number) => {
+      const effectTrigger = currentTime % 3000 > 0 && currentTime % 3000 < 500;
+      const effectTriggerPsych = currentTime % 7000 > 500 && currentTime % 7000 < 2000; 
       try {
         // フレームレート制限
         if (currentTime - lastDrawTime < frameInterval) {
@@ -434,7 +436,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.useProgram(badTVProgramRef.current!);
 
           // エフェクトIDに基づいてBad TV設定を取得
-          const badTVConfig = getBadTVConfigForEffect(current);
+          const badTVConfig = effectTrigger ? getBadTVConfigForEffect(current) : getBadTVConfigForEffect(0);
 
           // Bad TV Shaderのユニフォームを設定
           const timeLocation = gl.getUniformLocation(
@@ -469,7 +471,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             badTVProgramRef.current!,
             "u_interlaceLineWidth"
           );
-          gl.uniform1f(timeLocation, currentTime * 0.001);
+          gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
           gl.uniform1f(distortionLocation, badTVConfig.distortion);
           gl.uniform1f(distortion2Location, badTVConfig.distortion2);
           gl.uniform1f(speedLocation, badTVConfig.speed);
@@ -486,7 +488,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             interlaceLineWidthLocation,
             badTVConfig.interlaceLineWidth
           );
-
+          
           drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
         } else if (effectRenderData.effectType === "psychedelic") {
           // サイケデリックシェーダーでカメラ映像を描画
@@ -494,7 +496,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
           // エフェクトIDに基づいてサイケデリック設定を取得
           const psychedelicConfig = getPsychedelicConfigForEffect(current);
-
           // サイケデリックシェーダーのユニフォームを設定
           const timeLocation = gl.getUniformLocation(
             psychedelicProgramRef.current!,
@@ -520,7 +521,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-          gl.uniform1f(timeLocation, currentTime * 0.001);
+          gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
           gl.uniform1f(
             thermalIntensityLocation,
             psychedelicConfig.thermalIntensity
@@ -535,15 +536,19 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           );
           gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
           gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
-
-          drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
+          if (effectTriggerPsych) {
+            drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
+          } else {
+            // 通常のシェーダーでカメラ映像を描画
+            drawQuad(gl, program, identity, videoTexture);
+          }
         } else {
           // 通常のシェーダーでカメラ映像を描画
           drawQuad(gl, program, identity, videoTexture);
         }
 
         // Static Shaderを別レイヤーとしてオーバーレイ
-        const staticConfig = getStaticConfigForEffect(current);
+        const staticConfig = effectTrigger ? getStaticConfigForEffect(current) : getStaticConfigForEffect(0);
         gl.useProgram(staticProgramRef.current!);
 
         const staticTimeLocation = gl.getUniformLocation(
@@ -559,7 +564,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           "u_staticSize"
         );
 
-        gl.uniform1f(staticTimeLocation, currentTime * 0.001);
+        gl.uniform1f(staticTimeLocation, currentTime % 10000 * 0.01);
         gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
         gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 
