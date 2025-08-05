@@ -16,7 +16,6 @@ export default function SimpleCamera() {
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(0);
   const [ready, setReady] = useState(false);
-  const [blendMode] = useState<"source-over">("source-over");
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true);
 
   /* ---------- 1) カメラ & エフェクト初期化（初回のみ） ---------- */
@@ -101,7 +100,6 @@ export default function SimpleCamera() {
         current={current}
         ready={ready}
         isPreviewMode={false}
-        blendMode={blendMode}
         isNoSignalDetected={isNoSignalDetected}
       />
 
