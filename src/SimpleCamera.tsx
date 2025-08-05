@@ -102,7 +102,6 @@ export default function SimpleCamera() {
         ready={ready}
         isPreviewMode={false}
         blendMode={blendMode}
-        isSwitchingCamera={false}
         isNoSignalDetected={isNoSignalDetected}
       />
 
