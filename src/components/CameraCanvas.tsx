@@ -60,13 +60,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
-
-  // モバイルデバイス検出
-  useEffect(() => {
-    setIsMobile(shouldDisableShaders());
-  }, []);
 
   // エフェクト切り替え時のテキスト表示
   useEffect(() => {
@@ -184,219 +178,11 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     const targetFPS = 30; // モバイル用に30fpsに制限
     const frameInterval = 1000 / targetFPS;
 
-    // モバイルデバイスの場合はPC版と同じエフェクトを使用
-    if (isMobile) {
-      console.log("Mobile device detected - using PC effects");
-
-      // モバイル用の軽量描画ループ
-      const mobileDraw = (currentTime: number) => {
-        const effectTrigger = currentTime % badTvCycle > 0 && currentTime % badTvCycle < 500 || !isCycleOn;
-        const effectTriggerPsych = currentTime % psychCycle > 500 && currentTime % psychCycle < 2000 || !isCycleOn;
-        try {
-          const vid = videoRef.current!;
-          if (!vid.videoWidth || !vid.videoHeight) {
-            raf = requestAnimationFrame(mobileDraw);
-            return;
-          }
-
-          gl.clearColor(0.0, 0.0, 0.0, 1.0);
-          gl.clear(gl.COLOR_BUFFER_BIT);
-
-          // カメラ映像のテクスチャを作成
-          let videoTexture: WebGLTexture;
-          try {
-            videoTexture = createTexture(gl, vid);
-          } catch (error) {
-            console.error("Failed to create video texture:", error);
-            raf = requestAnimationFrame(mobileDraw);
-            return;
-          }
-
-          // エフェクトの描画データを取得
-          const effectRenderData = calculateEffectRenderData({
-            current,
-            bitmaps,
-            canvasWidth: targetWidth,
-            canvasHeight: targetHeight,
-            currentTime,
-          });
-
-          // カメラ映像を描画（PC版と同じエフェクトロジックを使用）
-          const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-
-          if (effectRenderData.effectType === "badTV") {
-            // Bad TV Shaderでカメラ映像を描画
-            gl.useProgram(badTVProgramRef.current!);
-
-            // エフェクトIDに基づいてBad TV設定を取得
-            const badTVConfig = effectTrigger ? getBadTVConfigForEffect(current) : getBadTVConfigForEffect(0);
-
-            // Bad TV Shaderのユニフォームを設定
-            const timeLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_time"
-            );
-            const distortionLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_distortion"
-            );
-            const distortion2Location = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_distortion2"
-            );
-            const speedLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_speed"
-            );
-            const rollSpeedLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_rollSpeed"
-            );
-            const chromaticAberrationLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_chromaticAberration"
-            );
-            const interlaceIntensityLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_interlaceIntensity"
-            );
-            const interlaceLineWidthLocation = gl.getUniformLocation(
-              badTVProgramRef.current!,
-              "u_interlaceLineWidth"
-            );
-
-            gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
-            gl.uniform1f(distortionLocation, badTVConfig.distortion);
-            gl.uniform1f(distortion2Location, badTVConfig.distortion2);
-            gl.uniform1f(speedLocation, badTVConfig.speed);
-            gl.uniform1f(rollSpeedLocation, badTVConfig.rollSpeed);
-            gl.uniform1f(
-              chromaticAberrationLocation,
-              badTVConfig.chromaticAberration
-            );
-            gl.uniform1f(
-              interlaceIntensityLocation,
-              badTVConfig.interlaceIntensity
-            );
-            gl.uniform1f(
-              interlaceLineWidthLocation,
-              badTVConfig.interlaceLineWidth
-            );
-
-            drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
-          } else if (effectRenderData.effectType === "psychedelic") {
-            // サイケデリックシェーダーでカメラ映像を描画
-            gl.useProgram(psychedelicProgramRef.current!);
-
-            // エフェクトIDに基づいてサイケデリック設定を取得
-            const psychedelicConfig = effectTriggerPsych ? getPsychedelicConfigForEffect(current) : getPsychedelicConfigForEffect(0);
-
-            // サイケデリックシェーダーのユニフォームを設定
-            const timeLocation = gl.getUniformLocation(
-              psychedelicProgramRef.current!,
-              "u_time"
-            );
-            const thermalIntensityLocation = gl.getUniformLocation(
-              psychedelicProgramRef.current!,
-              "u_thermalIntensity"
-            );
-            const contrastIntensityLocation = gl.getUniformLocation(
-              psychedelicProgramRef.current!,
-              "u_contrastIntensity"
-            );
-            const psychedelicSpeedLocation = gl.getUniformLocation(
-              psychedelicProgramRef.current!,
-              "u_psychedelicSpeed"
-            );
-            const channelShiftLocation = gl.getUniformLocation(
-              psychedelicProgramRef.current!,
-              "u_channelShift"
-            );
-            const glowIntensityLocation = gl.getUniformLocation(
-              psychedelicProgramRef.current!,
-              "u_glowIntensity"
-            );
-            gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
-            gl.uniform1f(
-              thermalIntensityLocation,
-              psychedelicConfig.thermalIntensity
-            );
-            gl.uniform1f(
-              contrastIntensityLocation,
-              psychedelicConfig.contrastIntensity
-            );
-            gl.uniform1f(
-              psychedelicSpeedLocation,
-              psychedelicConfig.psychedelicSpeed
-            );
-            gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
-            gl.uniform1f(
-              glowIntensityLocation,
-              psychedelicConfig.glowIntensity
-            );
-
-            drawQuad(
-              gl,
-              psychedelicProgramRef.current!,
-              identity,
-              videoTexture
-            );
-          } else {
-            // 通常のシェーダーでカメラ映像を描画
-            drawQuad(gl, program, identity, videoTexture);
-          }
-
-          // Static Shaderを別レイヤーとしてオーバーレイ
-          const staticConfig = effectTrigger ? getStaticConfigForEffect(current) : getStaticConfigForEffect(0);
-          gl.useProgram(staticProgramRef.current!);
-
-          const staticTimeLocation = gl.getUniformLocation(
-            staticProgramRef.current!,
-            "u_time"
-          );
-          const staticIntensityLocation = gl.getUniformLocation(
-            staticProgramRef.current!,
-            "u_staticIntensity"
-          );
-          const staticSizeLocation = gl.getUniformLocation(
-            staticProgramRef.current!,
-            "u_staticSize"
-          );
-
-          gl.uniform1f(staticTimeLocation, currentTime % 1000 * 0.001);
-          gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
-          gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
-
-          // 現在のフレームバッファをテクスチャとして使用してStaticShaderを適用
-          const frameBufferTexture = createTextureFromCanvas(gl, canvas);
-          drawQuad(gl, staticProgramRef.current!, identity, frameBufferTexture);
-          gl.deleteTexture(frameBufferTexture);
-
-          // カメラ映像テクスチャを解放
-          gl.deleteTexture(videoTexture);
-          console.log(currentTime);
-          raf = requestAnimationFrame(mobileDraw);
-        } catch (error) {
-          console.error("Mobile WebGL rendering error:", error);
-          raf = requestAnimationFrame(mobileDraw);
-        }
-      };
-
-      raf = requestAnimationFrame(mobileDraw);
-      return () => cancelAnimationFrame(raf);
-    }
-
+    // モバイル用の軽量描画ループ
     const draw = (currentTime: number) => {
       const effectTrigger = currentTime % badTvCycle > 0 && currentTime % badTvCycle < 500 || !isCycleOn;
-      const effectTriggerPsych = currentTime % psychCycle > 500 && currentTime % psychCycle < 2000 || !isCycleOn; 
+      const effectTriggerPsych = currentTime % psychCycle > 500 && currentTime % psychCycle < 2000 || !isCycleOn;
       try {
-        // フレームレート制限
-        if (currentTime - lastDrawTime < frameInterval) {
-          raf = requestAnimationFrame(draw);
-          return;
-        }
-        lastDrawTime = currentTime;
-
         const vid = videoRef.current!;
         if (!vid.videoWidth || !vid.videoHeight) {
           raf = requestAnimationFrame(draw);
@@ -425,7 +211,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           currentTime,
         });
 
-        // カメラ映像を先に描画（effect0の場合はBad TV Shaderを使用）
+        // カメラ映像を描画（PC版と同じエフェクトロジックを使用）
         const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
         if (effectRenderData.effectType === "badTV") {
@@ -468,6 +254,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             badTVProgramRef.current!,
             "u_interlaceLineWidth"
           );
+
           gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
           gl.uniform1f(distortionLocation, badTVConfig.distortion);
           gl.uniform1f(distortion2Location, badTVConfig.distortion2);
@@ -485,14 +272,15 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             interlaceLineWidthLocation,
             badTVConfig.interlaceLineWidth
           );
-          
+
           drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
         } else if (effectRenderData.effectType === "psychedelic") {
           // サイケデリックシェーダーでカメラ映像を描画
           gl.useProgram(psychedelicProgramRef.current!);
 
           // エフェクトIDに基づいてサイケデリック設定を取得
-          const psychedelicConfig = getPsychedelicConfigForEffect(current);
+          const psychedelicConfig = effectTriggerPsych ? getPsychedelicConfigForEffect(current) : getPsychedelicConfigForEffect(0);
+
           // サイケデリックシェーダーのユニフォームを設定
           const timeLocation = gl.getUniformLocation(
             psychedelicProgramRef.current!,
@@ -532,13 +320,17 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicConfig.psychedelicSpeed
           );
           gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
-          gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
-          if (effectTriggerPsych) {
-            drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
-          } else {
-            // 通常のシェーダーでカメラ映像を描画
-            drawQuad(gl, program, identity, videoTexture);
-          }
+          gl.uniform1f(
+            glowIntensityLocation,
+            psychedelicConfig.glowIntensity
+          );
+
+          drawQuad(
+            gl,
+            psychedelicProgramRef.current!,
+            identity,
+            videoTexture
+          );
         } else {
           // 通常のシェーダーでカメラ映像を描画
           drawQuad(gl, program, identity, videoTexture);
@@ -561,7 +353,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           "u_staticSize"
         );
 
-        gl.uniform1f(staticTimeLocation, currentTime % 1000 * 0.01);
+        gl.uniform1f(staticTimeLocation, currentTime % 1000 * 0.001);
         gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
         gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 
@@ -570,15 +362,12 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         drawQuad(gl, staticProgramRef.current!, identity, frameBufferTexture);
         gl.deleteTexture(frameBufferTexture);
 
-        // カメラ映像テクスチャを解放（描画完了後）
+        // カメラ映像テクスチャを解放
         gl.deleteTexture(videoTexture);
-
-        // ロゴの描画は新しいInitialScreenコンポーネントで処理されるため削除
-
+        console.log(currentTime);
         raf = requestAnimationFrame(draw);
       } catch (error) {
-        console.error("WebGL rendering error:", error);
-        // エラーが発生しても描画ループを継続
+        console.error("Mobile WebGL rendering error:", error);
         raf = requestAnimationFrame(draw);
       }
     };
