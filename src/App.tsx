@@ -15,7 +15,6 @@ import SimpleCameraPage from "./pages/SimpleCameraPage";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
 import {SongTitleOverlay} from "./components/SongTitleOverlay";
-import {SongTitleDemo} from "./components/SongTitleDemo";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -41,6 +40,11 @@ function FullCameraApp() {
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [songId, setSongId] = useState(-1); // Current song ID for overlay
   const [showSongTitle, setShowSongTitle] = useState(false); // Flag to show/hide song title overlay
+
+  // エフェクト周期の設定
+  const [isCycleOn, setIsCyclesOn] = useState(false);
+  const [badTvCycle, setBadTvCycle] = useState(3000);
+  const [psychCycle, setPsychCycle] = useState(7000);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
@@ -356,6 +360,9 @@ function FullCameraApp() {
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
             currentCategory={currentCategory}
+            isCycleOn={isCycleOn}
+            badTvCycle={badTvCycle}
+            psychCycle={psychCycle}
           />
 
           <AudioReceiver
@@ -375,15 +382,6 @@ function FullCameraApp() {
             currentId={current}
           />
 
-          {/* Song Title Demo Controls */}
-          <SongTitleDemo
-            isVisible={cameraMode !== "signal"}
-            onSongIdChange={setSongId}
-            onShowSongTitleChange={setShowSongTitle}
-            currentSongId={songId}
-            showSongTitle={showSongTitle}
-          />
-
           {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
           <InitialScreen
             isVisible={cameraMode === "signal" && isNoSignalDetected}
@@ -398,6 +396,16 @@ function FullCameraApp() {
             currentEffect={current}
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
+            isCycleOn={isCycleOn}
+            onCycleChange={setIsCyclesOn}
+            badTvCycle={badTvCycle}
+            onBadTvCycleChange={setBadTvCycle}
+            psychCycle={psychCycle}
+            onPsychCycle={setPsychCycle}
+            onSongIdChange={setSongId}
+            onShowSongTitleChange={setShowSongTitle}
+            currentSongId={songId}
+            showSongTitle={showSongTitle}
           />
 
           {/* エフェクトカテゴリー選択（手動モードのみ表示） */}

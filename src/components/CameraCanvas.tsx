@@ -28,6 +28,9 @@ interface CameraCanvasProps {
   currentCategory?: "normal" | "badTV" | "psychedelic";
   songId?: number; // Add song ID for overlay
   showSongTitle?: boolean; // Add flag to show/hide song title
+  isCycleOn?: boolean;
+  badTvCycle?: number;
+  psychCycle?: number;
 }
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
@@ -41,6 +44,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   onEffectChange,
   numEffects = 8,
   currentCategory = "normal",
+  isCycleOn = false,
+  badTvCycle = 3000,
+  psychCycle = 7000,
   // songId = -1,
   // showSongTitle = false,
 }) => {
@@ -184,6 +190,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
       // モバイル用の軽量描画ループ
       const mobileDraw = (currentTime: number) => {
+        const effectTrigger = currentTime % badTvCycle > 0 && currentTime % badTvCycle < 500 || !isCycleOn;
+        const effectTriggerPsych = currentTime % psychCycle > 500 && currentTime % psychCycle < 2000 || !isCycleOn;
         try {
           const vid = videoRef.current!;
           if (!vid.videoWidth || !vid.videoHeight) {
@@ -221,7 +229,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             gl.useProgram(badTVProgramRef.current!);
 
             // エフェクトIDに基づいてBad TV設定を取得
-            const badTVConfig = getBadTVConfigForEffect(current);
+            const badTVConfig = effectTrigger ? getBadTVConfigForEffect(current) : getBadTVConfigForEffect(0);
 
             // Bad TV Shaderのユニフォームを設定
             const timeLocation = gl.getUniformLocation(
@@ -257,7 +265,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
               "u_interlaceLineWidth"
             );
 
-            gl.uniform1f(timeLocation, currentTime * 0.001);
+            gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
             gl.uniform1f(distortionLocation, badTVConfig.distortion);
             gl.uniform1f(distortion2Location, badTVConfig.distortion2);
             gl.uniform1f(speedLocation, badTVConfig.speed);
@@ -281,7 +289,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             gl.useProgram(psychedelicProgramRef.current!);
 
             // エフェクトIDに基づいてサイケデリック設定を取得
-            const psychedelicConfig = getPsychedelicConfigForEffect(current);
+            const psychedelicConfig = effectTriggerPsych ? getPsychedelicConfigForEffect(current) : getPsychedelicConfigForEffect(0);
 
             // サイケデリックシェーダーのユニフォームを設定
             const timeLocation = gl.getUniformLocation(
@@ -308,7 +316,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
               psychedelicProgramRef.current!,
               "u_glowIntensity"
             );
-            gl.uniform1f(timeLocation, currentTime * 0.001);
+            gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
             gl.uniform1f(
               thermalIntensityLocation,
               psychedelicConfig.thermalIntensity
@@ -339,7 +347,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           }
 
           // Static Shaderを別レイヤーとしてオーバーレイ
-          const staticConfig = getStaticConfigForEffect(current);
+          const staticConfig = effectTrigger ? getStaticConfigForEffect(current) : getStaticConfigForEffect(0);
           gl.useProgram(staticProgramRef.current!);
 
           const staticTimeLocation = gl.getUniformLocation(
@@ -355,7 +363,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             "u_staticSize"
           );
 
-          gl.uniform1f(staticTimeLocation, currentTime * 0.001);
+          gl.uniform1f(staticTimeLocation, currentTime % 1000 * 0.001);
           gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
           gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 
@@ -366,7 +374,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
           // カメラ映像テクスチャを解放
           gl.deleteTexture(videoTexture);
-
+          console.log(currentTime);
           raf = requestAnimationFrame(mobileDraw);
         } catch (error) {
           console.error("Mobile WebGL rendering error:", error);
@@ -379,8 +387,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     }
 
     const draw = (currentTime: number) => {
-      const effectTrigger = currentTime % 3000 > 0 && currentTime % 3000 < 500;
-      const effectTriggerPsych = currentTime % 7000 > 500 && currentTime % 7000 < 2000; 
+      const effectTrigger = currentTime % badTvCycle > 0 && currentTime % badTvCycle < 500 || !isCycleOn;
+      const effectTriggerPsych = currentTime % psychCycle > 500 && currentTime % psychCycle < 2000 || !isCycleOn; 
       try {
         // フレームレート制限
         if (currentTime - lastDrawTime < frameInterval) {
@@ -553,7 +561,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           "u_staticSize"
         );
 
-        gl.uniform1f(staticTimeLocation, currentTime % 10000 * 0.01);
+        gl.uniform1f(staticTimeLocation, currentTime % 1000 * 0.01);
         gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
         gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 
