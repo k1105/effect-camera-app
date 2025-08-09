@@ -49,7 +49,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
-  const [effectTriggerId, setEffectTriggerId] = useState(-1);
+  //const [effectTriggerId, setEffectTriggerId] = useState(-1);
+  const effectTriggerId = 1;
 
   // エフェクト切り替え時のテキスト表示
   useEffect(() => {
