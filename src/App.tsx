@@ -1,25 +1,24 @@
-import { useEffect, useRef, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { PreviewScreen } from "./components/PreviewScreen";
-import { EffectSelector } from "./components/EffectSelector";
+import {useEffect, useRef, useState} from "react";
+import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
+import {PreviewScreen} from "./components/PreviewScreen";
+import {EffectSelector} from "./components/EffectSelector";
 import {
   EffectCategorySelector,
   type EffectCategory,
 } from "./components/EffectCategorySelector";
-import { ZoomControl } from "./components/ZoomControl";
-import { AudioReceiver } from "./components/AudioReceiver";
-import { InitialScreen } from "./components/InitialScreen";
+import {ZoomControl} from "./components/ZoomControl";
+import {AudioReceiver} from "./components/AudioReceiver";
+import {InitialScreen} from "./components/InitialScreen";
 import {
   HamburgerMenu,
   type CameraMode,
   type LayoutMode,
 } from "./components/HamburgerMenu";
-import SimpleCameraPage from "./pages/SimpleCameraPage";
-import { loadEffectsFromSpriteSheet } from "./utils/spriteSheetLoader";
-import { getCategoryFromEffectId } from "./utils/effectCategoryUtils";
-import { OnPerformance } from "./components/layout/OnPerformance";
-import { BeginPerformance } from "./components/layout/BeginPerformance";
-import { NoSignal } from "./components/layout/NoSignal";
+import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
+import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
+import {OnPerformance} from "./components/layout/OnPerformance";
+import {BeginPerformance} from "./components/layout/BeginPerformance";
+import {NoSignal} from "./components/layout/NoSignal";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -85,7 +84,7 @@ function FullCameraApp() {
           );
 
           await track.applyConstraints({
-            advanced: [{ zoom: deviceClampedZoom }],
+            advanced: [{zoom: deviceClampedZoom}],
           });
         }
       } catch (error) {
@@ -172,9 +171,9 @@ function FullCameraApp() {
       const constraints = {
         video: {
           facingMode: "environment",
-          width: { ideal: 1080 },
-          height: { ideal: 1920 },
-          frameRate: { ideal: 30 },
+          width: {ideal: 1080},
+          height: {ideal: 1920},
+          frameRate: {ideal: 30},
           zoom: zoom,
         },
         audio: {
@@ -237,9 +236,9 @@ function FullCameraApp() {
       const cameraConstraints = {
         video: {
           facingMode: "environment",
-          width: { ideal: 1080 },
-          height: { ideal: 1920 },
-          frameRate: { ideal: 30 },
+          width: {ideal: 1080},
+          height: {ideal: 1920},
+          frameRate: {ideal: 30},
           zoom: zoom,
         },
       };
@@ -294,7 +293,7 @@ function FullCameraApp() {
     <>
       <video
         ref={videoRef}
-        style={{ display: "none" }}
+        style={{display: "none"}}
         playsInline
         muted
         autoPlay
@@ -325,12 +324,10 @@ function FullCameraApp() {
               maxWidth: "400px",
             }}
           >
-            <h2 style={{ marginBottom: "20px", color: "#333" }}>
+            <h2 style={{marginBottom: "20px", color: "#333"}}>
               カメラとマイクの許可が必要です
             </h2>
-            <p
-              style={{ marginBottom: "30px", color: "#666", lineHeight: "1.5" }}
-            >
+            <p style={{marginBottom: "30px", color: "#666", lineHeight: "1.5"}}>
               このアプリケーションではカメラとマイクを使用します。
               <br />
               それぞれ許可してください。
@@ -465,7 +462,7 @@ function FullCameraApp() {
           >
             <EffectSelector
               effects={Array.from(
-                { length: NUM_EFFECTS },
+                {length: NUM_EFFECTS},
                 (_, i) => `effect${i + 1}`
               )}
               current={current}
