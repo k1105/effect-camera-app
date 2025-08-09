@@ -492,7 +492,6 @@ export default function App() {
       >
         <Routes>
           <Route path="/" element={<FullCameraApp />} />
-          <Route path="/simple" element={<SimpleCameraPage />} />
         </Routes>
       </div>
     </Router>
