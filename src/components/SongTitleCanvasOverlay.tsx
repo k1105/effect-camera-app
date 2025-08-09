@@ -235,9 +235,9 @@ export const SongTitleCanvasOverlay: React.FC<SongTitleCanvasOverlayProps> = ({
       if (showImage) {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         // Continue the animation loop
-        animationId = requestAnimationFrame(renderOverlay);
       }
       
+      animationId = requestAnimationFrame(renderOverlay);
     };
 
     // Start the continuous render loop

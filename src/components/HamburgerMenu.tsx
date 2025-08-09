@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 
-export type CameraMode = "signal" | "manual";
+export type CameraMode = "signal" | "manual" | undefined;
+export type LayoutMode = "OnPerformance" | "BeginPerformance" | "NoSignal" | "Countdown";
 
 interface HamburgerMenuProps {
   currentMode: CameraMode;
@@ -8,7 +9,43 @@ interface HamburgerMenuProps {
   currentEffect: number;
   onEffectChange: (effect: number) => void;
   numEffects: number;
+  isCycleOn: boolean;
+  onCycleChange: (isCycleOn: boolean) => void;
+  badTvCycle: number;
+  onBadTvCycleChange: (badTvCycle: number) => void;
+  psychCycle: number; 
+  onPsychCycle: (psychCycle: number) => void;
+  onSongIdChange: (songId: number) => void;
+  currentSongId: number;
+  currentLayout: LayoutMode;
+  onLayoutChange(currentLayout: LayoutMode): void
 }
+
+const LAYOUT_MODES: LayoutMode[] = [
+  "Countdown",
+  "BeginPerformance", 
+  "OnPerformance",
+  "NoSignal",
+]
+
+const SONG_NAMES = [
+  "Anyway",
+  "Black Nails", 
+  "Blueberry Gum",
+  "Darma",
+  "Gtoer Cracker",
+  "Heavens Seven",
+  "I Hate U",
+  "I Won't Let You Go",
+  "Make A Move",
+  "No Colors",
+  "Please",
+  "Sexual Conversation",
+  "Tokyo Sky Blues",
+  "Too Young To Get It Too Fast To Live",
+  "Totsugeki",
+  "Toxic Invasion"
+];
 
 export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   currentMode,
@@ -16,6 +53,16 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   currentEffect,
   onEffectChange,
   numEffects,
+  isCycleOn,
+  onCycleChange,
+  badTvCycle,
+  onBadTvCycleChange,
+  psychCycle,
+  onPsychCycle,
+  onSongIdChange,
+  currentSongId,
+  currentLayout,
+  onLayoutChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -87,6 +134,8 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             top: "80px",
             right: "20px",
             width: "280px",
+            height: "600px",
+            overflowY: "scroll",
             backgroundColor: "rgba(0, 0, 0, 0.9)",
             border: "2px solid rgba(255, 255, 255, 0.3)",
             borderRadius: "12px",
@@ -153,44 +202,156 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             </div>
           </div>
 
-          {/* 手動モード時のエフェクト選択 */}
+          {/*レイアウト選択 */}
           {currentMode === "manual" && (
             <div style={{marginBottom: "20px"}}>
-              <h4
-                style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}
-              >
-                エフェクト選択
+              <h4 style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}>
+                モード選択
               </h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "8px",
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                }}
-              >
-                {Array.from({length: numEffects}, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleEffectChange(i)}
-                    style={{
-                      padding: "8px",
-                      backgroundColor:
-                        currentEffect === i
-                          ? "#007AFF"
-                          : "rgba(255, 255, 255, 0.1)",
-                      border: "1px solid rgba(255, 255, 255, 0.3)",
-                      borderRadius: "6px",
-                      color: "white",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      minHeight: "40px",
-                    }}
-                  >
-                    エフェクト {i + 1}
-                  </button>
-                ))}
+              <div style={{marginBottom: "15px"}}>
+                <select
+                  value={currentLayout}
+                  onChange={(e) => onLayoutChange(e.target.value as LayoutMode)}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    color: "white",
+                    fontSize: "12px",
+                  }}
+                >
+                  {LAYOUT_MODES.map((name, index) => (
+                    <option key={index} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+          
+          {/* 手動モード時のエフェクト選択 */}
+          {currentMode === "manual" && (
+              <div style={{marginBottom: "20px"}}>
+                <h4
+                  style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}
+                >
+                  エフェクト選択
+                </h4>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "8px",
+                    maxHeight: "200px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {Array.from({length: numEffects}, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleEffectChange(i)}
+                      style={{
+                        padding: "8px",
+                        backgroundColor:
+                          currentEffect === i
+                            ? "#007AFF"
+                            : "rgba(255, 255, 255, 0.1)",
+                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                        borderRadius: "6px",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        minHeight: "40px",
+                      }}
+                    >
+                      エフェクト {i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+          )}
+
+          {/* エフェクト自動切り替え設定 */}
+          {currentMode === "manual" && (
+            <div style={{marginBottom: "20px"}}>
+              <h4 style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}>
+                エフェクト周期の設定
+              </h4>
+              <div style={{display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px"}}>
+                <label style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px"}}>
+                  <input
+                    type="checkbox"
+                    checked={isCycleOn}
+                    onChange={e => onCycleChange(e.target.checked)}
+                    style={{width: "18px", height: "18px"}}
+                  />
+                  有効化
+                </label>
+              </div>
+              <div style={{display: "flex", flexDirection: "column", gap: "16px"}}>
+                <label style={{display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px"}}>
+                  Bad TV周期: {badTvCycle} ms
+                  <input
+                    type="range"
+                    min={0}
+                    max={10000}
+                    step={500}
+                    value={badTvCycle}
+                    onChange={e => onBadTvCycleChange(Number(e.target.value))}
+                    disabled={!isCycleOn}
+                    style={{width: "100%"}}
+                  />
+                </label>
+                <label style={{display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px"}}>
+                  Psychedelic周期: {psychCycle} ms
+                  <input
+                    type="range"
+                    min={0}
+                    max={10000}
+                    step={500}
+                    value={psychCycle}
+                    onChange={e => onPsychCycle(Number(e.target.value))}
+                    disabled={!isCycleOn}
+                    style={{width: "100%"}}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* 曲名オーバーレイ設定 */}
+          {currentMode === "manual" && (
+            <div style={{marginBottom: "20px"}}>
+              <h4 style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}>
+                曲名オーバーレイ
+              </h4>
+              <div style={{marginBottom: "15px"}}>
+                <label style={{display: "block", marginBottom: "5px", fontSize: "14px"}}>
+                  曲を選択:
+                </label>
+                <select
+                  value={currentSongId}
+                  onChange={(e) => onSongIdChange(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    color: "white",
+                    fontSize: "12px",
+                  }}
+                >
+                  <option value={-1}>曲なし</option>
+                  {SONG_NAMES.map((name, index) => (
+                    <option key={index} value={index}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
