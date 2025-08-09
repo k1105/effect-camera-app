@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 
-export type CameraMode = "signal" | "manual";
+export type CameraMode = "signal" | "manual" | undefined;
+export type LayoutMode = "OnPerformance" | "BeginPerformance" | "NoSignal" | "Countdown";
 
 interface HamburgerMenuProps {
   currentMode: CameraMode;
@@ -15,10 +16,17 @@ interface HamburgerMenuProps {
   psychCycle: number; 
   onPsychCycle: (psychCycle: number) => void;
   onSongIdChange: (songId: number) => void;
-  onShowSongTitleChange: (show: boolean) => void;
   currentSongId: number;
-  showSongTitle: boolean;
+  currentLayout: LayoutMode;
+  onLayoutChange(currentLayout: LayoutMode): void
 }
+
+const LAYOUT_MODES: LayoutMode[] = [
+  "Countdown",
+  "BeginPerformance", 
+  "OnPerformance",
+  "NoSignal",
+]
 
 const SONG_NAMES = [
   "Anyway",
@@ -52,9 +60,9 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   psychCycle,
   onPsychCycle,
   onSongIdChange,
-  onShowSongTitleChange,
   currentSongId,
-  showSongTitle,
+  currentLayout,
+  onLayoutChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -194,6 +202,36 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             </div>
           </div>
 
+          {/*レイアウト選択 */}
+          {currentMode === "manual" && (
+            <div style={{marginBottom: "20px"}}>
+              <h4 style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}>
+                モード選択
+              </h4>
+              <div style={{marginBottom: "15px"}}>
+                <select
+                  value={currentLayout}
+                  onChange={(e) => onLayoutChange(e.target.value as LayoutMode)}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    color: "white",
+                    fontSize: "12px",
+                  }}
+                >
+                  {LAYOUT_MODES.map((name, index) => (
+                    <option key={index} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+          
           {/* 手動モード時のエフェクト選択 */}
           {currentMode === "manual" && (
               <div style={{marginBottom: "20px"}}>
@@ -314,28 +352,6 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     </option>
                   ))}
                 </select>
-              </div>
-              <div style={{marginBottom: "10px"}}>
-                <label style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px"}}>
-                  <input
-                    type="checkbox"
-                    checked={showSongTitle}
-                    onChange={(e) => onShowSongTitleChange(e.target.checked)}
-                    style={{width: "18px", height: "18px"}}
-                  />
-                  曲名オーバーレイを表示
-                </label>
-              </div>
-              <div style={{fontSize: "10px", opacity: 0.7, lineHeight: "1.3"}}>
-                <div style={{marginBottom: "2px"}}>
-                  <strong>HTML Overlay:</strong> HTML要素として上に表示
-                </div>
-                <div style={{marginBottom: "2px"}}>
-                  <strong>Canvas Overlay:</strong> WebGLキャンバス内に表示
-                </div>
-                <div>
-                  <strong>Cycle:</strong> 1秒表示、4秒非表示
-                </div>
               </div>
             </div>
           )}

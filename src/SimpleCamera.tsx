@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {CameraCanvas} from "./components/CameraCanvas";
+import {CameraCanvas} from "./components/layers/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InitialScreen} from "./components/InitialScreen";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
@@ -99,7 +99,6 @@ export default function SimpleCamera() {
         bitmaps={bitmaps}
         current={current}
         ready={ready}
-        isPreviewMode={false}
         isNoSignalDetected={isNoSignalDetected}
       />
 
