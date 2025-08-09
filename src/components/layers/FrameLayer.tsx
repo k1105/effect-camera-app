@@ -1,5 +1,5 @@
 export const FrameLayer = () => {
-  const imagePath = "/assets/frame/asp_interface_prototype_white.png"
+  const imagePath = "/assets/frame/asp_interface_prototype_white.png";
   return (
     <div
       style={{
@@ -29,5 +29,5 @@ export const FrameLayer = () => {
         }}
       />
     </div>
-  )
-}
+  );
+};

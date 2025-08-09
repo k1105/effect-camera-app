@@ -12,7 +12,7 @@ import {
 import {initWebGL} from "../../utils/webGLInitializer";
 import {getEffectName, getEffectOverlayColor} from "../../utils/effectUtils";
 import {getNextEffectIdInCategory} from "../../utils/effectCategoryUtils";
-import type { CameraMode } from "../HamburgerMenu";
+import type {CameraMode} from "../HamburgerMenu";
 // import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
 export interface CameraCanvasProps {
@@ -36,7 +36,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   cameraMode = "signal",
   onEffectChange,
   numEffects = 8,
-  currentCategory = "normal"
+  currentCategory = "normal",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -163,9 +163,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     gl.viewport(0, 0, targetWidth, targetHeight);
 
     let raf = 0;
-    let lastDrawTime = 0;
-    const targetFPS = 30; // モバイル用に30fpsに制限
-    const frameInterval = 1000 / targetFPS;
 
     // モバイル用の軽量描画ループ
     const draw = (currentTime: number) => {
@@ -206,7 +203,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.useProgram(badTVProgramRef.current!);
 
           // エフェクトIDに基づいてBad TV設定を取得
-          const badTVConfig = effectTriggerId > 0 ? getBadTVConfigForEffect(current) : getBadTVConfigForEffect(0);
+          const badTVConfig =
+            effectTriggerId > 0
+              ? getBadTVConfigForEffect(current)
+              : getBadTVConfigForEffect(0);
 
           // Bad TV Shaderのユニフォームを設定
           const timeLocation = gl.getUniformLocation(
@@ -242,7 +242,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             "u_interlaceLineWidth"
           );
 
-          gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
+          gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
           gl.uniform1f(distortionLocation, badTVConfig.distortion);
           gl.uniform1f(distortion2Location, badTVConfig.distortion2);
           gl.uniform1f(speedLocation, badTVConfig.speed);
@@ -266,7 +266,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.useProgram(psychedelicProgramRef.current!);
 
           // エフェクトIDに基づいてサイケデリック設定を取得
-          const psychedelicConfig = effectTriggerId % 4 === 0 && effectTriggerId > 0 ? getPsychedelicConfigForEffect(current) : getPsychedelicConfigForEffect(0);
+          const psychedelicConfig =
+            effectTriggerId % 4 === 0 && effectTriggerId > 0
+              ? getPsychedelicConfigForEffect(current)
+              : getPsychedelicConfigForEffect(0);
 
           // サイケデリックシェーダーのユニフォームを設定
           const timeLocation = gl.getUniformLocation(
@@ -293,7 +296,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-          gl.uniform1f(timeLocation, currentTime % 10000 * 0.001);
+          gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
           gl.uniform1f(
             thermalIntensityLocation,
             psychedelicConfig.thermalIntensity
@@ -307,24 +310,19 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicConfig.psychedelicSpeed
           );
           gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
-          gl.uniform1f(
-            glowIntensityLocation,
-            psychedelicConfig.glowIntensity
-          );
+          gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
 
-          drawQuad(
-            gl,
-            psychedelicProgramRef.current!,
-            identity,
-            videoTexture
-          );
+          drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
         } else {
           // 通常のシェーダーでカメラ映像を描画
           drawQuad(gl, program, identity, videoTexture);
         }
 
         // Static Shaderを別レイヤーとしてオーバーレイ
-        const staticConfig = effectTriggerId % 4 === 0 && effectTriggerId > 0 ? getStaticConfigForEffect(current) : getStaticConfigForEffect(0);
+        const staticConfig =
+          effectTriggerId % 4 === 0 && effectTriggerId > 0
+            ? getStaticConfigForEffect(current)
+            : getStaticConfigForEffect(0);
         gl.useProgram(staticProgramRef.current!);
 
         const staticTimeLocation = gl.getUniformLocation(
@@ -340,7 +338,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           "u_staticSize"
         );
 
-        gl.uniform1f(staticTimeLocation, currentTime % 1000 * 0.001);
+        gl.uniform1f(staticTimeLocation, (currentTime % 1000) * 0.001);
         gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
         gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 

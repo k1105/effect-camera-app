@@ -3,7 +3,6 @@ const staticImgMap = new Map();
 staticImgMap.set(-1, "default");
 staticImgMap.set(0, "default");
 
-
 staticImgMap.set(1, "default");
 staticImgMap.set(2, "default");
 staticImgMap.set(3, "default");
@@ -30,13 +29,11 @@ interface StaticLayerProps {
   songId: number;
 }
 
-export const StaticLayer = ({
-  songId
-}: StaticLayerProps) => {
-
-  const imagePath = staticImgMap.get(songId) === "default" || "" 
-    ? "/assets/static/blueberry_gum.gif" 
-    : "/assets/static/" + staticImgMap.get(songId)
+export const StaticLayer = ({songId}: StaticLayerProps) => {
+  const imagePath =
+    staticImgMap.get(songId) === "default" || ""
+      ? "/assets/static/blueberry_gum.gif"
+      : "/assets/static/" + staticImgMap.get(songId);
   const isShowImage = staticImgMap.get(songId) === "" ? false : true;
   const heightOffset = 600;
   const widthOffset = Math.floor(heightOffset * (9 / 16));
@@ -56,7 +53,7 @@ export const StaticLayer = ({
         justifyContent: "center",
       }}
     >
-      {isShowImage &&
+      {isShowImage && (
         <img
           src={imagePath}
           style={{
@@ -64,14 +61,14 @@ export const StaticLayer = ({
             height: `calc(1920px - ${heightOffset}px)`,
             transform: "rotate(90deg)",
             objectFit: "contain",
-            transition: "opacity 0.3s ease-in-out", 
+            transition: "opacity 0.3s ease-in-out",
           }}
           onError={(e) => {
             console.error(`Failed to load image: ${imagePath}`);
             e.currentTarget.style.display = "none";
           }}
         />
-      }
+      )}
     </div>
-  )
-} 
+  );
+};
