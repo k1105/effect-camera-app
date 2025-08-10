@@ -199,7 +199,7 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({songId}) => {
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
             lineHeight: 1,
-            fontSize: "8px",
+            fontSize: "0.8rem",
             color: "white",
             textShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
             opacity: flickerOpacity,
