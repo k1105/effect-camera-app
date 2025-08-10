@@ -10,11 +10,9 @@ export const BeginPerformance = ({
   return (
     <>
       <FrameLayer/>
-
       <SongTitleOverlay
         songId={songId}
       />
-
     </>
   );
 };

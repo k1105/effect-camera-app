@@ -19,7 +19,7 @@ import {isMobileDevice} from "./utils/deviceDetection";
 import { CameraCanvas } from "./components/layers/CameraCanvas";
 
 /* ---------- 定数 ---------- */
-const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
+const NUM_EFFECTS = 16; // スプライトシートから8つのエフェクトを読み込み
 
 function FullCameraApp() {
   /* ---------- Refs & State ---------- */
@@ -40,7 +40,8 @@ function FullCameraApp() {
   const [layout, setLayout] = useState<LayoutMode>("NoSignal");
   
   // エフェクト制御
-  const [isBeginSong, setIsBeginSong] = useState(false);
+  const [isBeginingSong, setisBeginingSong] = useState(false);
+  const isBeginingSongRef = useRef(false);
 
   const [countdownDate, setCountdownDate] = useState("2025-08-10");
   const [countdownTime, setCountdownTime] = useState("00:00");
@@ -120,11 +121,13 @@ function FullCameraApp() {
 
   const onBeginSignal = () => {
     setLayout("BeginPerformance");
-    setIsBeginSong(true);
+    setisBeginingSong(true);
+    isBeginingSongRef.current = true;
     setTimeout(() => {
       setLayout("OnPerformance");
-      setIsBeginSong(false);
-    }, 3000);
+      setisBeginingSong(false);
+      isBeginingSongRef.current = false;
+    }, 7000);
   }
 
   const onFinnishSignal = () => {
@@ -137,8 +140,9 @@ function FullCameraApp() {
   }
 
   const handleEffectDetected = (effectId: number) => {
+    console.log(isBeginingSongRef.current);
     setIsNoSignalDetected(false);
-    if (isBeginSong) return;
+    if (isBeginingSongRef.current) return;
     if (effectId === 14) {
       onBeginSignal();
       return;
@@ -157,6 +161,7 @@ function FullCameraApp() {
   };
 
   const handleNoSignalDetected = () => {
+    if(isBeginingSongRef.current) return;
     setIsNoSignalDetected(true);
   };
 
@@ -329,7 +334,7 @@ function FullCameraApp() {
 
   // signal 
   useEffect(() => {
-    if(isNoSignalDetected && !isBeginSong){
+    if(isNoSignalDetected && !isBeginingSong){
       onNoSignal();
     }
   }, [isNoSignalDetected])
@@ -338,6 +343,10 @@ function FullCameraApp() {
   useEffect(() => {
     setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
   }, [countdownDate, countdownTime])
+
+  useEffect(() => {
+    console.log(isBeginingSong);
+  }, [isBeginingSong])
 
   /* ---------- UI ---------- */
   return (
