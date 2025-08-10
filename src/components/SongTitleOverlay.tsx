@@ -36,7 +36,7 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
   songId,
 }) => {
   const [showImage, setShowImage] = useState(false);
-  const isOutOfBound = songId < 0 || songId >= NUM_SONGS ? true : false;
+  const isOutOfBound = songId < 0 || songId >= NUM_SONGS ? true : false || songTitleMap.get(songId) === "";
   const imagePath = `/assets/song_title/${songTitleMap.get(songId)}.png`;
   useEffect(() => {
     const cycle = () => {
