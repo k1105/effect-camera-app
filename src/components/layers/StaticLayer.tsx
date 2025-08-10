@@ -1,29 +1,29 @@
 const staticImgMap = new Map();
 
 staticImgMap.set(-1, "default");
-staticImgMap.set(0, "default");
+staticImgMap.set(0, "");
 
-staticImgMap.set(1, "default");
-staticImgMap.set(2, "default");
-staticImgMap.set(3, "default");
-staticImgMap.set(4, "default");
+staticImgMap.set(1, "");
+staticImgMap.set(2, "");
+staticImgMap.set(3, "");
+staticImgMap.set(4, "");
 staticImgMap.set(5, "default");
 
 staticImgMap.set(6, "");
-staticImgMap.set(7, "default");
-staticImgMap.set(8, "default");
-staticImgMap.set(9, "default");
-staticImgMap.set(10, "default");
+staticImgMap.set(7, "");
+staticImgMap.set(8, "");
+staticImgMap.set(9, "");
+staticImgMap.set(10, "");
 
-staticImgMap.set(11, "default");
-staticImgMap.set(12, "default");
-staticImgMap.set(13, "default");
-staticImgMap.set(14, "blueberry_gum.gif");
-staticImgMap.set(15, "default");
+staticImgMap.set(11, "");
+staticImgMap.set(12, "");
+staticImgMap.set(13, "blueberry_gum.gif");
+staticImgMap.set(14, "");
+staticImgMap.set(15, "");
 
 staticImgMap.set(16, "default");
 staticImgMap.set(17, "");
-staticImgMap.set(18, "default");
+staticImgMap.set(18, "");
 
 interface StaticLayerProps {
   songId: number;

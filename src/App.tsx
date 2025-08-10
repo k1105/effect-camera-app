@@ -142,7 +142,6 @@ function FullCameraApp() {
   };
 
   const handleEffectDetected = (effectId: number) => {
-    console.log(isBeginingSongRef.current);
     setIsNoSignalDetected(false);
     if (isBeginingSongRef.current) return;
     if (effectId === 14) {

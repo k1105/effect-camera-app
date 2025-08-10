@@ -4,31 +4,40 @@ export interface SongTitleOverlayProps {
   songId: number;
 }
 
-const SONG_TITLES = [
-  "anyway",
-  "black_nails", 
-  "blueberry_gum",
-  "darma",
-  "gtoer_cracker",
-  "heavens_seven",
-  "I-hate-u",
-  "I-wont-let-you-go",
-  "make_a_move",
-  "no_colors",
-  "please",
-  "sexual_conversation",
-  "tokyo_sky_blues",
-  "too_young_to_get_it_too_fast_to_live",
-  "totsugeki",
-  "toxic_invasion"
-];
+const NUM_SONGS = 18;
+
+const songTitleMap = new Map();
+
+songTitleMap.set(-1, "");
+songTitleMap.set(0, "toxic_invasion");
+
+songTitleMap.set(1, "black_nails");
+songTitleMap.set(2, "no_colors");
+songTitleMap.set(3, "totsugeki");
+songTitleMap.set(4, "make_a_move");
+songTitleMap.set(5, "I-wont-let-you-go");
+
+songTitleMap.set(6, "darma");
+songTitleMap.set(7, "");
+songTitleMap.set(8, "sexual_conversation");
+songTitleMap.set(9, "tokyo_sky_blues");
+songTitleMap.set(10, "please");
+
+songTitleMap.set(11, "anyway");
+songTitleMap.set(12, "I-hate-u");
+songTitleMap.set(13, "blueberry_gum");
+songTitleMap.set(14, "heavens_seven");
+songTitleMap.set(15, "");
+
+songTitleMap.set(16, "too_young_to_get_it_too_fast_to_live");
+songTitleMap.set(17, "gtoer_cracker");
 
 export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
   songId,
 }) => {
   const [showImage, setShowImage] = useState(false);
-  const isOutOfBound = songId < 0 || songId >= SONG_TITLES.length ? true : false;
-  const imagePath = `/assets/song_title/${SONG_TITLES[songId]}.png`;
+  const isOutOfBound = songId < 0 || songId >= NUM_SONGS ? true : false;
+  const imagePath = `/assets/song_title/${songTitleMap.get(songId)}.png`;
   useEffect(() => {
     const cycle = () => {
       // Show image for 1 second
