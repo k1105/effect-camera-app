@@ -446,7 +446,7 @@ function FullCameraApp() {
 
           {!permissionsGranted && (
             <InitialScreen
-              isVisible={cameraMode === "signal" && isNoSignalDetected}
+              isVisible={isNoSignalDetected}
               onRequestPermissions={requestPermissions}
               showPermissionRequest={!permissionsGranted}
             />
