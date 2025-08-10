@@ -40,7 +40,6 @@ function FullCameraApp() {
   const [layout, setLayout] = useState<LayoutMode>("NoSignal");
 
   // エフェクト制御
-  const [isBeginingSong, setisBeginingSong] = useState(false);
   const isBeginingSongRef = useRef(false);
 
   const [countdownDate, setCountdownDate] = useState("2025-08-10");
@@ -123,11 +122,9 @@ function FullCameraApp() {
 
   const onBeginSignal = () => {
     setLayout("BeginPerformance");
-    setisBeginingSong(true);
     isBeginingSongRef.current = true;
     setTimeout(() => {
       setLayout("OnPerformance");
-      setisBeginingSong(false);
       isBeginingSongRef.current = false;
     }, 7000);
   }
@@ -344,10 +341,6 @@ function FullCameraApp() {
   useEffect(() => {
     setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
   }, [countdownDate, countdownTime]);
-
-  useEffect(() => {
-    console.log(isBeginingSong);
-  }, [isBeginingSong])
 
   /* ---------- UI ---------- */
   return (
