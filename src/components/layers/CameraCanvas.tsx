@@ -10,8 +10,6 @@ import {
   drawQuad,
 } from "../../utils/webglUtils";
 import {initWebGL} from "../../utils/webGLInitializer";
-import {getEffectName, getEffectOverlayColor} from "../../utils/effectUtils";
-import {getNextEffectIdInCategory} from "../../utils/effectCategoryUtils";
 import type {CameraMode} from "../HamburgerMenu";
 // import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
@@ -36,7 +34,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   cameraMode = "signal",
   onEffectChange,
   numEffects = 8,
-  currentCategory = "normal",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -67,8 +64,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const handleCanvasTap = () => {
     if (onEffectChange) {
       // カテゴリー内での次のエフェクトに切り替え
-      const nextEffect = getNextEffectIdInCategory(current, currentCategory);
-      onEffectChange(nextEffect);
 
     }
     
@@ -403,7 +398,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           left: 0,
           width: "100vw",
           height: "100vh",
-          backgroundColor: getEffectOverlayColor(current),
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
           opacity: overlayOpacity,
           pointerEvents: "none",
           zIndex: 1,
@@ -428,9 +423,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             opacity: effectTextOpacity,
             transition: "opacity 0.3s ease-in-out",
           }}
-        >
-          {getEffectName(current)}
-        </div>
+        ></div>
       )}
 
       {/* タップフィードバック */}
