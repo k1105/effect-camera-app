@@ -49,8 +49,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
-  //const [effectTriggerId, setEffectTriggerId] = useState(-1);
-  const effectTriggerId = 1;
+  const [effectTriggerId, setEffectTriggerId] = useState(0);
+  const [isEffectOn, setIsEffectOn] = useState(false);
 
   // エフェクト切り替え時のテキスト表示
   useEffect(() => {
@@ -70,10 +70,15 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       const nextEffect = getNextEffectIdInCategory(current, currentCategory);
       onEffectChange(nextEffect);
 
-      // タップフィードバックを表示
-      setShowTapFeedback(true);
-      setTimeout(() => setShowTapFeedback(false), 300);
     }
+    
+    setIsEffectOn(true);
+    setEffectTriggerId(id => id + 1);
+    setTimeout(() => setIsEffectOn(false), 500);
+
+    // タップフィードバックを表示
+    setShowTapFeedback(true);
+    setTimeout(() => setShowTapFeedback(false), 300);
   };
 
   // WebGL初期化
@@ -199,13 +204,13 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         // カメラ映像を描画（PC版と同じエフェクトロジックを使用）
         const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-        if (effectRenderData.effectType === "badTV") {
+        if (isEffectOn) {
           // Bad TV Shaderでカメラ映像を描画
           gl.useProgram(badTVProgramRef.current!);
 
           // エフェクトIDに基づいてBad TV設定を取得
           const badTVConfig =
-            effectTriggerId > 0
+            isEffectOn
               ? getBadTVConfigForEffect(current)
               : getBadTVConfigForEffect(0);
 
@@ -262,21 +267,23 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           );
 
           drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
-        } else if (effectRenderData.effectType === "psychedelic") {
+        } 
+
+        if (isEffectOn && effectTriggerId % 6 === 0) {
           // サイケデリックシェーダーでカメラ映像を描画
           gl.useProgram(psychedelicProgramRef.current!);
 
           // エフェクトIDに基づいてサイケデリック設定を取得
           const psychedelicConfig =
-            effectTriggerId % 4 === 0 && effectTriggerId > 0
+            isEffectOn
               ? getPsychedelicConfigForEffect(current)
               : getPsychedelicConfigForEffect(0);
 
           // サイケデリックシェーダーのユニフォームを設定
-          const timeLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_time"
-          );
+          // const timeLocation = gl.getUniformLocation(
+          //   psychedelicProgramRef.current!,
+          //   "u_time"
+          // );
           const thermalIntensityLocation = gl.getUniformLocation(
             psychedelicProgramRef.current!,
             "u_thermalIntensity"
@@ -297,7 +304,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-          gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
+         // gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
           gl.uniform1f(
             thermalIntensityLocation,
             psychedelicConfig.thermalIntensity
@@ -314,14 +321,16 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
 
           drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
-        } else {
+        } 
+
+        if (!isEffectOn) {
           // 通常のシェーダーでカメラ映像を描画
           drawQuad(gl, program, identity, videoTexture);
         }
 
         // Static Shaderを別レイヤーとしてオーバーレイ
         const staticConfig =
-          effectTriggerId % 4 === 0 && effectTriggerId > 0
+          effectTriggerId % 4 === 0 && isEffectOn
             ? getStaticConfigForEffect(current)
             : getStaticConfigForEffect(0);
         gl.useProgram(staticProgramRef.current!);
@@ -368,6 +377,8 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     cameraMode,
     onEffectChange,
     numEffects,
+    effectTriggerId,
+    isEffectOn
   ]);
 
   return (
