@@ -7,10 +7,10 @@ import {ZoomControl} from "./components/ZoomControl";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InitialScreen} from "./components/InitialScreen";
 import {
-  HamburgerMenu,
-  type CameraMode,
-  type LayoutMode,
-} from "./components/HamburgerMenu";
+  NewHamburgerMenu,
+  type SignalLogEntry,
+} from "./components/NewHamburgerMenu";
+import type {CameraMode, LayoutMode} from "./components/HamburgerMenu";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {OnPerformance} from "./components/layout/OnPerformance";
 import {BeginPerformance} from "./components/layout/BeginPerformance";
@@ -44,6 +44,14 @@ function FullCameraApp() {
   const [isCycleOn, setIsCyclesOn] = useState(false);
   const [badTvCycle, setBadTvCycle] = useState(3000);
   const [psychCycle, setPsychCycle] = useState(7000);
+
+  // 新しいハンバーガーメニュー用のstate
+  const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([
+    {timestamp: "2025-08-10 00:00:00", signal: "BEGIN"},
+    {timestamp: "2025-08-10 00:00:00", signal: "FINISH"},
+  ]);
+  const [countdownDate, setCountdownDate] = useState("2025-08-10");
+  const [countdownTime, setCountdownTime] = useState("00:00");
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
@@ -139,6 +147,37 @@ function FullCameraApp() {
 
   const handleEffectChange = (effect: number) => {
     setCurrent(effect);
+  };
+
+  // 新しいハンバーガーメニュー用の関数
+  const handleBeginSignal = () => {
+    const timestamp = new Date().toLocaleTimeString();
+    setSignalLog((prev) => [...prev, {timestamp, signal: "BEGIN"}]);
+  };
+
+  const handleFinishSignal = () => {
+    const timestamp = new Date().toLocaleTimeString();
+    setSignalLog((prev) => [...prev, {timestamp, signal: "FINISH"}]);
+  };
+
+  const handleSimulatorIndexChange = (index: number) => {
+    setCurrent(index);
+  };
+
+  // レイアウト名を表示用の文字列に変換
+  const getLayoutDisplayName = (layout: LayoutMode): string => {
+    switch (layout) {
+      case "OnPerformance":
+        return "OnPerformance";
+      case "BeginPerformance":
+        return "BeginPerformance";
+      case "NoSignal":
+        return "NoSignal";
+      case "Countdown":
+        return "Countdown";
+      default:
+        return "Unknown";
+    }
   };
 
   // 権限要求関数
@@ -400,22 +439,18 @@ function FullCameraApp() {
           )}
 
           {/* ハンバーガーメニュー */}
-          <HamburgerMenu
-            currentMode={cameraMode}
-            onModeChange={handleModeChange}
-            currentEffect={current}
-            onEffectChange={handleEffectChange}
-            numEffects={NUM_EFFECTS}
-            isCycleOn={isCycleOn}
-            onCycleChange={setIsCyclesOn}
-            badTvCycle={badTvCycle}
-            onBadTvCycleChange={setBadTvCycle}
-            psychCycle={psychCycle}
-            onPsychCycle={setPsychCycle}
-            onSongIdChange={setSongId}
-            currentSongId={songId}
-            currentLayout={layout}
-            onLayoutChange={setLayout}
+          <NewHamburgerMenu
+            currentState={getLayoutDisplayName(layout)}
+            currentIndex={current}
+            signalLog={signalLog}
+            onBeginSignal={handleBeginSignal}
+            onFinishSignal={handleFinishSignal}
+            onIndexChange={handleSimulatorIndexChange}
+            currentSimulatorIndex={current}
+            countdownDate={countdownDate}
+            countdownTime={countdownTime}
+            onDateChange={setCountdownDate}
+            onTimeChange={setCountdownTime}
           />
 
           <div
