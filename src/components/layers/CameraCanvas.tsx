@@ -10,7 +10,6 @@ import {
   drawQuad,
 } from "../../utils/webglUtils";
 import {initWebGL} from "../../utils/webGLInitializer";
-import {getNextEffectIdInCategory} from "../../utils/effectCategoryUtils";
 import type {CameraMode} from "../HamburgerMenu";
 // import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
@@ -35,7 +34,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   cameraMode = "signal",
   onEffectChange,
   numEffects = 8,
-  currentCategory = "normal",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const glRef = useRef<WebGLRenderingContext | null>(null);
@@ -66,8 +64,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const handleCanvasTap = () => {
     if (onEffectChange) {
       // カテゴリー内での次のエフェクトに切り替え
-      const nextEffect = getNextEffectIdInCategory(current, currentCategory);
-      onEffectChange(nextEffect);
 
       // タップフィードバックを表示
       setShowTapFeedback(true);
