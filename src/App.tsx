@@ -332,7 +332,7 @@ function FullCameraApp() {
 
   // signal
   useEffect(() => {
-    if(isNoSignalDetected && !isBeginingSong){
+    if(isNoSignalDetected && !isBeginingSongRef){
       onNoSignal();
     }
   }, [isNoSignalDetected]);
