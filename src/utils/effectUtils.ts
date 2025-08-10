@@ -1,20 +1,3 @@
-// エフェクト関連のユーティリティ関数
-
-// エフェクト名の取得
-export const getEffectName = (effectId: number): string => {
-  const effectNames = [
-    "Normal",
-    "Bad TV - Moderate",
-    "Bad TV - Heavy",
-    "Bad TV - Extreme",
-    "Psychedelic - Subtle",
-    "Psychedelic - Moderate",
-    "Psychedelic - Intense",
-    "Psychedelic - Extreme",
-  ];
-  return effectNames[effectId] || `Effect ${effectId}`;
-};
-
 // エフェクトに応じたオーバーレイ色の取得
 export const getEffectOverlayColor = (effectId: number): string => {
   switch (effectId) {

@@ -1,6 +1,5 @@
 import type {FC} from "react";
 import {getLayoutForEffect} from "../utils/effectLayouts";
-import {getEffectName} from "../utils/effectUtils";
 
 interface EffectSelectorProps {
   effects: string[];
@@ -43,7 +42,6 @@ export const EffectSelector: FC<EffectSelectorProps> = ({
               minWidth: "80px",
             }}
           >
-            <div>{getEffectName(i)}</div>
             <div style={{fontSize: "10px", opacity: 0.8}}>{layoutLabel}</div>
           </button>
         );

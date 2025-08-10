@@ -1,7 +1,11 @@
 import React, {useState} from "react";
 
 export type CameraMode = "signal" | "manual" | undefined;
-export type LayoutMode = "OnPerformance" | "BeginPerformance" | "NoSignal" | "Countdown";
+export type LayoutMode =
+  | "OnPerformance"
+  | "BeginPerformance"
+  | "NoSignal"
+  | "Countdown";
 
 interface HamburgerMenuProps {
   currentMode: CameraMode;
@@ -13,24 +17,24 @@ interface HamburgerMenuProps {
   onCycleChange: (isCycleOn: boolean) => void;
   badTvCycle: number;
   onBadTvCycleChange: (badTvCycle: number) => void;
-  psychCycle: number; 
+  psychCycle: number;
   onPsychCycle: (psychCycle: number) => void;
   onSongIdChange: (songId: number) => void;
   currentSongId: number;
   currentLayout: LayoutMode;
-  onLayoutChange(currentLayout: LayoutMode): void
+  onLayoutChange(currentLayout: LayoutMode): void;
 }
 
 const LAYOUT_MODES: LayoutMode[] = [
   "Countdown",
-  "BeginPerformance", 
+  "BeginPerformance",
   "OnPerformance",
   "NoSignal",
-]
+];
 
 const SONG_NAMES = [
   "Anyway",
-  "Black Nails", 
+  "Black Nails",
   "Blueberry Gum",
   "Darma",
   "Gtoer Cracker",
@@ -44,7 +48,7 @@ const SONG_NAMES = [
   "Tokyo Sky Blues",
   "Too Young To Get It Too Fast To Live",
   "Totsugeki",
-  "Toxic Invasion"
+  "Toxic Invasion",
 ];
 
 export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
@@ -205,7 +209,9 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {/*レイアウト選択 */}
           {currentMode === "manual" && (
             <div style={{marginBottom: "20px"}}>
-              <h4 style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}>
+              <h4
+                style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}
+              >
                 モード選択
               </h4>
               <div style={{marginBottom: "15px"}}>
@@ -231,68 +237,93 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               </div>
             </div>
           )}
-          
+
           {/* 手動モード時のエフェクト選択 */}
           {currentMode === "manual" && (
-              <div style={{marginBottom: "20px"}}>
-                <h4
-                  style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}
-                >
-                  エフェクト選択
-                </h4>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: "8px",
-                    maxHeight: "200px",
-                    overflowY: "auto",
-                  }}
-                >
-                  {Array.from({length: numEffects}, (_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleEffectChange(i)}
-                      style={{
-                        padding: "8px",
-                        backgroundColor:
-                          currentEffect === i
-                            ? "#007AFF"
-                            : "rgba(255, 255, 255, 0.1)",
-                        border: "1px solid rgba(255, 255, 255, 0.3)",
-                        borderRadius: "6px",
-                        color: "white",
-                        cursor: "pointer",
-                        fontSize: "12px",
-                        minHeight: "40px",
-                      }}
-                    >
-                      エフェクト {i + 1}
-                    </button>
-                  ))}
-                </div>
+            <div style={{marginBottom: "20px"}}>
+              <h4
+                style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}
+              >
+                信号シミュレーション
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "8px",
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                }}
+              >
+                {Array.from({length: numEffects}, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleEffectChange(i)}
+                    style={{
+                      padding: "8px",
+                      backgroundColor:
+                        currentEffect === i
+                          ? "#007AFF"
+                          : "rgba(255, 255, 255, 0.1)",
+                      border: "1px solid rgba(255, 255, 255, 0.3)",
+                      borderRadius: "6px",
+                      color: "white",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      minHeight: "40px",
+                    }}
+                  >
+                    Signal {i + 1}
+                  </button>
+                ))}
               </div>
+            </div>
           )}
 
           {/* エフェクト自動切り替え設定 */}
           {currentMode === "manual" && (
             <div style={{marginBottom: "20px"}}>
-              <h4 style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}>
+              <h4
+                style={{margin: "0 0 10px 0", fontSize: "14px", opacity: 0.8}}
+              >
                 エフェクト周期の設定
               </h4>
-              <div style={{display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px"}}>
-                <label style={{display: "flex", alignItems: "center", gap: "8px", fontSize: "14px"}}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "10px",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "14px",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={isCycleOn}
-                    onChange={e => onCycleChange(e.target.checked)}
+                    onChange={(e) => onCycleChange(e.target.checked)}
                     style={{width: "18px", height: "18px"}}
                   />
                   有効化
                 </label>
               </div>
-              <div style={{display: "flex", flexDirection: "column", gap: "16px"}}>
-                <label style={{display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px"}}>
+              <div
+                style={{display: "flex", flexDirection: "column", gap: "16px"}}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    fontSize: "14px",
+                  }}
+                >
                   Bad TV周期: {badTvCycle} ms
                   <input
                     type="range"
@@ -300,12 +331,19 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     max={10000}
                     step={500}
                     value={badTvCycle}
-                    onChange={e => onBadTvCycleChange(Number(e.target.value))}
+                    onChange={(e) => onBadTvCycleChange(Number(e.target.value))}
                     disabled={!isCycleOn}
                     style={{width: "100%"}}
                   />
                 </label>
-                <label style={{display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px"}}>
+                <label
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    fontSize: "14px",
+                  }}
+                >
                   Psychedelic周期: {psychCycle} ms
                   <input
                     type="range"
@@ -313,7 +351,7 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     max={10000}
                     step={500}
                     value={psychCycle}
-                    onChange={e => onPsychCycle(Number(e.target.value))}
+                    onChange={(e) => onPsychCycle(Number(e.target.value))}
                     disabled={!isCycleOn}
                     style={{width: "100%"}}
                   />
@@ -325,11 +363,19 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           {/* 曲名オーバーレイ設定 */}
           {currentMode === "manual" && (
             <div style={{marginBottom: "20px"}}>
-              <h4 style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}>
+              <h4
+                style={{margin: "0 0 10px 0", fontSize: "16px", opacity: 0.8}}
+              >
                 曲名オーバーレイ
               </h4>
               <div style={{marginBottom: "15px"}}>
-                <label style={{display: "block", marginBottom: "5px", fontSize: "14px"}}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "5px",
+                    fontSize: "14px",
+                  }}
+                >
                   曲を選択:
                 </label>
                 <select
