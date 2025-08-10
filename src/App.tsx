@@ -61,6 +61,7 @@ function FullCameraApp() {
   ]);
   const [countdownDate, setCountdownDate] = useState("2025-08-10");
   const [countdownTime, setCountdownTime] = useState("00:00");
+  const [halfTime, setHalfTime] = useState(15);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
@@ -473,8 +474,10 @@ function FullCameraApp() {
             currentSimulatorIndex={current}
             countdownDate={countdownDate}
             countdownTime={countdownTime}
+            halfTime={halfTime}
             onDateChange={setCountdownDate}
             onTimeChange={setCountdownTime}
+            onHalfTimeChange={setHalfTime}
           />
 
           <div

@@ -22,8 +22,10 @@ export interface NewHamburgerMenuProps {
   // Countdown Timer
   countdownDate: string;
   countdownTime: string;
+  halfTime: number;
   onDateChange: (date: string) => void;
   onTimeChange: (time: string) => void;
+  onHalfTimeChange: (halfTime: number) => void;
 }
 
 export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
@@ -36,8 +38,10 @@ export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
   currentSimulatorIndex,
   countdownDate,
   countdownTime,
+  halfTime,
   onDateChange,
   onTimeChange,
+  onHalfTimeChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -378,6 +382,38 @@ export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
                   type="time"
                   value={countdownTime}
                   onChange={(e) => onTimeChange(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    borderRadius: "6px",
+                    color: "white",
+                    fontSize: "14px",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    minWidth: "50px",
+                  }}
+                >
+                  Half Time (min):
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={halfTime}
+                  onChange={(e) => onHalfTimeChange(Number(e.target.value))}
                   style={{
                     flex: 1,
                     padding: "8px 12px",
