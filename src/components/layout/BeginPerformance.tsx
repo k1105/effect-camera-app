@@ -1,20 +1,15 @@
-import { FrameLayer } from "../layers/FrameLayer";
-import { SongTitleOverlay, type SongTitleOverlayProps } from "../SongTitleOverlay";
+import {FrameLayer} from "../layers/FrameLayer";
+import {
+  SongTitleOverlay,
+  type SongTitleOverlayProps,
+} from "../SongTitleOverlay";
 
-interface BeginPerformanceProps extends SongTitleOverlayProps {
-};
-
-export const BeginPerformance = ({
-  songId,
-}: BeginPerformanceProps) => {
+export const BeginPerformance = ({songId}: SongTitleOverlayProps) => {
   return (
     <>
-      <FrameLayer/>
+      <FrameLayer />
 
-      <SongTitleOverlay
-        songId={songId}
-      />
-
+      <SongTitleOverlay songId={songId} />
     </>
   );
 };

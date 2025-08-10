@@ -10,13 +10,13 @@ import {
   NewHamburgerMenu,
   type SignalLogEntry,
 } from "./components/NewHamburgerMenu";
-import type {CameraMode, LayoutMode} from "./components/HamburgerMenu";
+import type {LayoutMode} from "./components/HamburgerMenu";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {OnPerformance} from "./components/layout/OnPerformance";
 import {BeginPerformance} from "./components/layout/BeginPerformance";
 import {NoSignal} from "./components/layout/NoSignal";
 import {isMobileDevice} from "./utils/deviceDetection";
-import { CameraCanvas } from "./components/layers/CameraCanvas";
+import {CameraCanvas} from "./components/layers/CameraCanvas";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -38,20 +38,22 @@ function FullCameraApp() {
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [layout, setLayout] = useState<LayoutMode>("NoSignal");
-  
+
   // エフェクト制御
   const [isBeginSong, setIsBeginSong] = useState(false);
 
   const [countdownDate, setCountdownDate] = useState("2025-08-10");
   const [countdownTime, setCountdownTime] = useState("00:00");
   const [halfTime, setHalfTime] = useState(15);
-  const [startTime, setStartTime] = useState(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
+  const [startTime, setStartTime] = useState(
+    new Date(`${countdownDate}T${countdownTime}:00`).getTime()
+  );
   const [ellapsedTime, setEllapsedTime] = useState(0);
   const isHalfTimeEllapsed = ellapsedTime > 60;
 
   setInterval(() => {
     setEllapsedTime(Math.floor((Date.now() - startTime) / 1000 / 60));
-  }, 5000)
+  }, 5000);
 
   // 新しいハンバーガーメニュー用のstate
   const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([
@@ -125,16 +127,16 @@ function FullCameraApp() {
       setLayout("OnPerformance");
       setIsBeginSong(false);
     }, 3000);
-  }
+  };
 
   const onFinnishSignal = () => {
     setLayout("NoSignal");
-  }
+  };
 
   const onNoSignal = () => {
     setLayout("NoSignal");
     setCurrent(-1);
-  }
+  };
 
   const handleEffectDetected = (effectId: number) => {
     setIsNoSignalDetected(false);
@@ -147,10 +149,10 @@ function FullCameraApp() {
       onFinnishSignal();
       return;
     }
-    if(isHalfTimeEllapsed){
+    if (isHalfTimeEllapsed) {
       setCurrent(effectId + 10);
       setLayout("OnPerformance");
-      return
+      return;
     }
     setCurrent(effectId);
     setLayout("OnPerformance");
@@ -327,17 +329,17 @@ function FullCameraApp() {
     };
   }, []);
 
-  // signal 
+  // signal
   useEffect(() => {
-    if(isNoSignalDetected && !isBeginSong){
+    if (isNoSignalDetected && !isBeginSong) {
       onNoSignal();
     }
-  }, [isNoSignalDetected])
+  }, [isNoSignalDetected]);
 
   // time
   useEffect(() => {
     setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
-  }, [countdownDate, countdownTime])
+  }, [countdownDate, countdownTime]);
 
   /* ---------- UI ---------- */
   return (
@@ -428,21 +430,13 @@ function FullCameraApp() {
             numEffects={NUM_EFFECTS}
           />
 
-          {layout === "OnPerformance" && (
-            <OnPerformance
-              current={current}
-            />
-          )}
+          {layout === "OnPerformance" && <OnPerformance current={current} />}
 
           {layout === "BeginPerformance" && (
-            <BeginPerformance
-              songId={current}
-            />
+            <BeginPerformance songId={current} />
           )}
 
-          {layout === "NoSignal" && (
-            <NoSignal/>
-          )}
+          {layout === "NoSignal" && <NoSignal />}
 
           {!permissionsGranted && (
             <InitialScreen
