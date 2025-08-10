@@ -187,6 +187,7 @@ function FullCameraApp() {
   };
 
   const handleSimulatorIndexChange = (index: number) => {
+    beginFlagRef.current = current !== index ? false : true; 
     setCurrent(index);
   };
 
