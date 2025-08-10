@@ -1,5 +1,4 @@
 import {useEffect, useRef, useState} from "react";
-import {calculateEffectRenderData} from "../../utils/effectRenderer";
 import {getBadTVConfigForEffect} from "../../utils/badTVConfig";
 import {getPsychedelicConfigForEffect} from "../../utils/psychedelicConfig";
 import {getStaticConfigForEffect} from "../../utils/staticConfig";
@@ -10,7 +9,6 @@ import {
   drawQuad,
 } from "../../utils/webglUtils";
 import {initWebGL} from "../../utils/webGLInitializer";
-import type {CameraMode} from "../HamburgerMenu";
 // import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
 export interface CameraCanvasProps {
@@ -19,7 +17,6 @@ export interface CameraCanvasProps {
   current: number;
   ready: boolean;
   isNoSignalDetected?: boolean;
-  cameraMode: CameraMode;
   onEffectChange?: (effect: number) => void;
   numEffects?: number;
   currentCategory?: "normal" | "badTV" | "psychedelic";
@@ -31,7 +28,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   current,
   ready,
   isNoSignalDetected = false,
-  cameraMode = "signal",
   onEffectChange,
   numEffects = 8,
 }) => {
@@ -42,12 +38,11 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
   const staticProgramRef = useRef<WebGLProgram | null>(null);
-  const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
-  //const [effectTriggerId, setEffectTriggerId] = useState(-1);
-  const effectTriggerId = 1;
+  const [effectTriggerId, setEffectTriggerId] = useState(0);
+  const [isEffectOn, setIsEffectOn] = useState(false);
 
   // エフェクト切り替え時のテキスト表示
   useEffect(() => {
@@ -62,13 +57,13 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   // タップハンドラー
   const handleCanvasTap = () => {
-    if (onEffectChange) {
-      // カテゴリー内での次のエフェクトに切り替え
+    setIsEffectOn(true);
+    setEffectTriggerId(id => id + 1);
+    setTimeout(() => setIsEffectOn(false), 500);
 
-      // タップフィードバックを表示
-      setShowTapFeedback(true);
-      setTimeout(() => setShowTapFeedback(false), 300);
-    }
+    // タップフィードバックを表示
+    setShowTapFeedback(true);
+    setTimeout(() => setShowTapFeedback(false), 300);
   };
 
   // WebGL初期化
@@ -96,31 +91,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       return false;
     }
   };
-
-  // エフェクトが検出された時のオーバーレイフェードアウト
-  useEffect(() => {
-    if (!isNoSignalDetected && overlayOpacity > 0) {
-      const fadeOutDuration = 500;
-      const fadeOutSteps = 20;
-      const opacityStep = overlayOpacity / fadeOutSteps;
-      const stepDuration = fadeOutDuration / fadeOutSteps;
-
-      const fadeOutInterval = setInterval(() => {
-        setOverlayOpacity((prev) => {
-          const newOpacity = prev - opacityStep;
-          if (newOpacity <= 0) {
-            clearInterval(fadeOutInterval);
-            return 0;
-          }
-          return newOpacity;
-        });
-      }, stepDuration);
-
-      return () => clearInterval(fadeOutInterval);
-    } else if (isNoSignalDetected && overlayOpacity < 0.8) {
-      setOverlayOpacity(0.8);
-    }
-  }, [isNoSignalDetected, overlayOpacity]);
 
   useEffect(() => {
     if (!ready) return;
@@ -182,25 +152,16 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           return;
         }
 
-        // エフェクトの描画データを取得
-        const effectRenderData = calculateEffectRenderData({
-          current,
-          bitmaps,
-          canvasWidth: targetWidth,
-          canvasHeight: targetHeight,
-          currentTime,
-        });
-
         // カメラ映像を描画（PC版と同じエフェクトロジックを使用）
         const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-        if (effectRenderData.effectType === "badTV") {
+        if (isEffectOn) {
           // Bad TV Shaderでカメラ映像を描画
           gl.useProgram(badTVProgramRef.current!);
 
           // エフェクトIDに基づいてBad TV設定を取得
           const badTVConfig =
-            effectTriggerId > 0
+            isEffectOn
               ? getBadTVConfigForEffect(current)
               : getBadTVConfigForEffect(0);
 
@@ -257,21 +218,23 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           );
 
           drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
-        } else if (effectRenderData.effectType === "psychedelic") {
+        } 
+
+        if (isEffectOn && effectTriggerId % 6 === 0) {
           // サイケデリックシェーダーでカメラ映像を描画
           gl.useProgram(psychedelicProgramRef.current!);
 
           // エフェクトIDに基づいてサイケデリック設定を取得
           const psychedelicConfig =
-            effectTriggerId % 4 === 0 && effectTriggerId > 0
+            isEffectOn
               ? getPsychedelicConfigForEffect(current)
               : getPsychedelicConfigForEffect(0);
 
           // サイケデリックシェーダーのユニフォームを設定
-          const timeLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_time"
-          );
+          // const timeLocation = gl.getUniformLocation(
+          //   psychedelicProgramRef.current!,
+          //   "u_time"
+          // );
           const thermalIntensityLocation = gl.getUniformLocation(
             psychedelicProgramRef.current!,
             "u_thermalIntensity"
@@ -292,7 +255,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-          gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
+         // gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
           gl.uniform1f(
             thermalIntensityLocation,
             psychedelicConfig.thermalIntensity
@@ -309,14 +272,16 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
 
           drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
-        } else {
+        } 
+
+        if (!isEffectOn) {
           // 通常のシェーダーでカメラ映像を描画
           drawQuad(gl, program, identity, videoTexture);
         }
 
         // Static Shaderを別レイヤーとしてオーバーレイ
         const staticConfig =
-          effectTriggerId % 4 === 0 && effectTriggerId > 0
+          effectTriggerId % 4 === 0 && isEffectOn
             ? getStaticConfigForEffect(current)
             : getStaticConfigForEffect(0);
         gl.useProgram(staticProgramRef.current!);
@@ -360,9 +325,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     bitmaps,
     videoRef,
     isNoSignalDetected,
-    cameraMode,
     onEffectChange,
     numEffects,
+    effectTriggerId,
+    isEffectOn
   ]);
 
   return (
@@ -388,7 +354,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           width: "100vw",
           height: "100vh",
           backgroundColor: "rgba(0, 0, 0, 0.8)",
-          opacity: overlayOpacity,
+          opacity: 0,
           pointerEvents: "none",
           zIndex: 1,
           transition: "opacity 0.1s ease-out",
@@ -416,7 +382,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       )}
 
       {/* タップフィードバック */}
-      {showTapFeedback && cameraMode === "manual" && (
+      {showTapFeedback && (
         <div
           style={{
             position: "fixed",
