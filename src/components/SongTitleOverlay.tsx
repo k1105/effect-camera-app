@@ -1,5 +1,4 @@
 import {useEffect, useState} from "react";
-import type { CameraMode } from "./HamburgerMenu";
 
 export interface SongTitleOverlayProps {
   songId: number;

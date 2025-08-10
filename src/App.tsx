@@ -16,6 +16,7 @@ import {OnPerformance} from "./components/layout/OnPerformance";
 import {BeginPerformance} from "./components/layout/BeginPerformance";
 import {NoSignal} from "./components/layout/NoSignal";
 import {isMobileDevice} from "./utils/deviceDetection";
+import { CameraCanvas } from "./components/layers/CameraCanvas";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -34,34 +35,29 @@ function FullCameraApp() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
-  const [cameraMode, setCameraMode] = useState<CameraMode>("signal"); // デフォルトは信号同期モード
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
-  const [songId, setSongId] = useState(3); // Current song ID for overlay
   const [layout, setLayout] = useState<LayoutMode>("NoSignal");
   
   // エフェクト制御
   const [isBeginSong, setIsBeginSong] = useState(false);
 
-  const month = "08";
-  const date = "10";
-  const time = "18:00";
-  const startTime = new Date(`2025-${month}-${date}T${time}:00`).getTime();
+  const [countdownDate, setCountdownDate] = useState("2025-08-10");
+  const [countdownTime, setCountdownTime] = useState("00:00");
+  const [halfTime, setHalfTime] = useState(15);
+  const [startTime, setStartTime] = useState(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
   const [ellapsedTime, setEllapsedTime] = useState(0);
   const isHalfTimeEllapsed = ellapsedTime > 60;
 
   setInterval(() => {
-    setEllapsedTime((Date.now() - startTime) / 1000 / 60);
-  }, 1000)
+    setEllapsedTime(Math.floor((Date.now() - startTime) / 1000 / 60));
+  }, 5000)
 
   // 新しいハンバーガーメニュー用のstate
   const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([
     {timestamp: "2025-08-10 00:00:00", signal: "BEGIN"},
     {timestamp: "2025-08-10 00:00:00", signal: "FINISH"},
   ]);
-  const [countdownDate, setCountdownDate] = useState("2025-08-10");
-  const [countdownTime, setCountdownTime] = useState("00:00");
-  const [halfTime, setHalfTime] = useState(15);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
@@ -332,12 +328,16 @@ function FullCameraApp() {
   }, []);
 
   // signal 
-
   useEffect(() => {
     if(isNoSignalDetected && !isBeginSong){
       onNoSignal();
     }
   }, [isNoSignalDetected])
+
+  // time
+  useEffect(() => {
+    setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
+  }, [countdownDate, countdownTime])
 
   /* ---------- UI ---------- */
   return (
@@ -418,41 +418,30 @@ function FullCameraApp() {
 
           {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
 
+          <CameraCanvas
+            videoRef={videoRef}
+            bitmaps={bitmaps}
+            current={current}
+            ready={ready}
+            isNoSignalDetected={isNoSignalDetected}
+            onEffectChange={handleEffectChange}
+            numEffects={NUM_EFFECTS}
+          />
+
           {layout === "OnPerformance" && (
             <OnPerformance
-              videoRef={videoRef}
-              bitmaps={bitmaps}
               current={current}
-              ready={ready}
-              isNoSignalDetected={isNoSignalDetected}
-              onEffectChange={handleEffectChange}
-              numEffects={NUM_EFFECTS}
             />
           )}
 
           {layout === "BeginPerformance" && (
             <BeginPerformance
-              videoRef={videoRef}
-              bitmaps={bitmaps}
-              current={current}
-              ready={ready}
-              isNoSignalDetected={isNoSignalDetected}
-              onEffectChange={handleEffectChange}
-              numEffects={NUM_EFFECTS}
-              songId={songId}
+              songId={current}
             />
           )}
 
           {layout === "NoSignal" && (
-            <NoSignal
-              videoRef={videoRef}
-              bitmaps={bitmaps}
-              current={current}
-              ready={ready}
-              isNoSignalDetected={isNoSignalDetected}
-              onEffectChange={handleEffectChange}
-              numEffects={NUM_EFFECTS}
-            />
+            <NoSignal/>
           )}
 
           {!permissionsGranted && (
