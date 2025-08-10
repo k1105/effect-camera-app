@@ -2,6 +2,7 @@
 import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
 import {VitePWA} from "vite-plugin-pwa";
+// import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
   server: {
@@ -11,7 +12,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    react(),
+    react(), 
+    // basicSsl(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "pwa-192.svg", "pwa-512.svg"],

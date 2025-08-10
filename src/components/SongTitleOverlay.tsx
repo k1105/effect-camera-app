@@ -1,9 +1,8 @@
 import {useEffect, useState} from "react";
 import type { CameraMode } from "./HamburgerMenu";
 
-interface SongTitleOverlayProps {
+export interface SongTitleOverlayProps {
   songId: number;
-  isVisible: boolean;
   cameraMode: CameraMode;
   currentId: number;
 }
@@ -29,19 +28,13 @@ const SONG_TITLES = [
 
 export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
   songId,
-  isVisible,
   cameraMode,
   currentId
 }) => {
   const [showImage, setShowImage] = useState(false);
-  const isManualMode = cameraMode === "manual" ? songId < 0 || songId >= SONG_TITLES.length : false;
+  const isOutOfBound = songId < 0 || songId >= SONG_TITLES.length ? true : false;
   const imagePath = cameraMode === 'signal' ? `/assets/song_title/${SONG_TITLES[currentId]}.png` : `/assets/song_title/${SONG_TITLES[songId]}.png`;
   useEffect(() => {
-    if (!isVisible) {
-      setShowImage(false);
-      return;
-    }
-
     const cycle = () => {
       // Show image for 1 second
       setShowImage(true);
@@ -62,12 +55,11 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
       clearInterval(interval);
       setShowImage(false);
     };
-  }, [isVisible, songId, currentId]);
+  }, [songId, currentId]);
 
-  if (!isVisible || !showImage || isManualMode) {
+  if (!showImage || isOutOfBound) {
     return null;
   }
-
 
   return (
     <div
@@ -90,6 +82,9 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
         style={{
           maxWidth: "80%",
           maxHeight: "80%",
+          top: "0%",
+          left: "0%",
+          translate: "0% -10%",
           objectFit: "contain",
           opacity: showImage ? 1 : 0,
           transition: "opacity 0.3s ease-in-out",

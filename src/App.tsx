@@ -7,15 +7,19 @@ import {
   type EffectCategory,
 } from "./components/EffectCategorySelector";
 import {ZoomControl} from "./components/ZoomControl";
-import {CameraCanvas} from "./components/CameraCanvas";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InitialScreen} from "./components/InitialScreen";
-import {HamburgerMenu, type CameraMode} from "./components/HamburgerMenu";
-import SimpleCameraPage from "./pages/SimpleCameraPage";
+import {
+  HamburgerMenu,
+  type CameraMode,
+  type LayoutMode,
+} from "./components/HamburgerMenu";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
-import {SongTitleOverlay} from "./components/SongTitleOverlay";
-import {SongTitleDemo} from "./components/SongTitleDemo";
+import {OnPerformance} from "./components/layout/OnPerformance";
+import {BeginPerformance} from "./components/layout/BeginPerformance";
+import {NoSignal} from "./components/layout/NoSignal";
+import { isMobileDevice } from "./utils/deviceDetection";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -39,8 +43,13 @@ function FullCameraApp() {
     useState<EffectCategory>("normal"); // 現在のエフェクトカテゴリー
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
-  const [songId, setSongId] = useState(-1); // Current song ID for overlay
-  const [showSongTitle, setShowSongTitle] = useState(false); // Flag to show/hide song title overlay
+  const [songId, setSongId] = useState(3); // Current song ID for overlay
+  const [layout, setLayout] = useState<LayoutMode>("NoSignal");
+
+  // エフェクト周期の設定
+  const [isCycleOn, setIsCyclesOn] = useState(false);
+  const [badTvCycle, setBadTvCycle] = useState(3000);
+  const [psychCycle, setPsychCycle] = useState(7000);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
@@ -104,15 +113,20 @@ function FullCameraApp() {
   const handleEffectDetected = (effectId: number) => {
     // 信号同期モードの場合のみエフェクトを切り替え
     if (cameraMode === "signal") {
+      if (effectId === 14) {
+        setCurrent(effectId);
+        setLayout("BeginPerformance");
+      }
       setCurrent(effectId);
-      setIsNoSignalDetected(false); // エフェクトが検出されたら信号なし状態を解除
+      setLayout("OnPerformance");
     }
   };
 
   const handleNoSignalDetected = () => {
     // 信号同期モードの場合のみ信号なし状態を設定
     if (cameraMode === "signal") {
-      setIsNoSignalDetected(true); // 信号が検出されていない状態に設定
+      //setIsNoSignalDetected(true); // 信号が検出されていない状態に設定
+      setLayout("NoSignal");
     }
   };
 
@@ -153,13 +167,14 @@ function FullCameraApp() {
   const requestPermissions = async () => {
     try {
       console.log("権限要求開始");
-
+      const width = isMobileDevice() ? 1920 : 1080;
+      const height = isMobileDevice() ? 1080 : 1920;
       // 基本制約で権限を要求
       const constraints = {
         video: {
           facingMode: "environment",
-          width: {ideal: 1080},
-          height: {ideal: 1920},
+          width: {ideal: width},
+          height: {ideal: height},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
@@ -220,11 +235,14 @@ function FullCameraApp() {
   const initializeCamera = async () => {
     try {
       /* -- a) カメラ -- */
+      const width = isMobileDevice() ? 1920 : 1080;
+      const height = isMobileDevice() ? 1080 : 1920;
+
       const cameraConstraints = {
         video: {
           facingMode: "environment",
-          width: {ideal: 1080},
-          height: {ideal: 1920},
+          width: {ideal: width},
+          height: {ideal: height},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
@@ -345,19 +363,6 @@ function FullCameraApp() {
         />
       ) : (
         <>
-          <CameraCanvas
-            videoRef={videoRef}
-            bitmaps={bitmaps}
-            current={current}
-            ready={ready}
-            isPreviewMode={isPreviewMode}
-            isNoSignalDetected={isNoSignalDetected}
-            cameraMode={cameraMode}
-            onEffectChange={handleEffectChange}
-            numEffects={NUM_EFFECTS}
-            currentCategory={currentCategory}
-          />
-
           <AudioReceiver
             onEffectDetected={handleEffectDetected}
             availableEffects={NUM_EFFECTS}
@@ -365,31 +370,59 @@ function FullCameraApp() {
             permissionsGranted={permissionsGranted}
           />
 
-          {/* HTML Song Title Overlay */}
-          <SongTitleOverlay
-            songId={songId}
-            isVisible={
-              showSongTitle || (cameraMode === "signal" && !isNoSignalDetected)
-            }
-            cameraMode={cameraMode}
-            currentId={current}
-          />
-
-          {/* Song Title Demo Controls */}
-          <SongTitleDemo
-            isVisible={cameraMode !== "signal"}
-            onSongIdChange={setSongId}
-            onShowSongTitleChange={setShowSongTitle}
-            currentSongId={songId}
-            showSongTitle={showSongTitle}
-          />
-
           {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
-          <InitialScreen
-            isVisible={cameraMode === "signal" && isNoSignalDetected}
-            onRequestPermissions={requestPermissions}
-            showPermissionRequest={!permissionsGranted}
-          />
+
+          {layout === "OnPerformance" && (
+            <OnPerformance
+              videoRef={videoRef}
+              bitmaps={bitmaps}
+              current={current}
+              ready={ready}
+              isNoSignalDetected={isNoSignalDetected}
+              cameraMode={cameraMode}
+              onEffectChange={handleEffectChange}
+              numEffects={NUM_EFFECTS}
+              currentCategory={currentCategory}
+            />
+          )}
+
+          {layout === "BeginPerformance" && (
+            <BeginPerformance
+              videoRef={videoRef}
+              bitmaps={bitmaps}
+              current={current}
+              ready={ready}
+              isNoSignalDetected={isNoSignalDetected}
+              cameraMode={cameraMode}
+              onEffectChange={handleEffectChange}
+              numEffects={NUM_EFFECTS}
+              currentCategory={currentCategory}
+              currentId={current}
+              songId={songId}
+            />
+          )}
+
+          {layout === "NoSignal" && (
+            <NoSignal
+              videoRef={videoRef}
+              bitmaps={bitmaps}
+              current={current}
+              ready={ready}
+              isNoSignalDetected={isNoSignalDetected}
+              cameraMode={cameraMode}
+              onEffectChange={handleEffectChange}
+              numEffects={NUM_EFFECTS}
+              currentCategory={currentCategory}
+            />
+          )}
+
+          {!permissionsGranted && (
+            <InitialScreen
+              isVisible={cameraMode === "signal" && isNoSignalDetected}
+              onRequestPermissions={requestPermissions}
+              showPermissionRequest={!permissionsGranted}
+            />
+          )}
 
           {/* ハンバーガーメニュー */}
           <HamburgerMenu
@@ -398,6 +431,16 @@ function FullCameraApp() {
             currentEffect={current}
             onEffectChange={handleEffectChange}
             numEffects={NUM_EFFECTS}
+            isCycleOn={isCycleOn}
+            onCycleChange={setIsCyclesOn}
+            badTvCycle={badTvCycle}
+            onBadTvCycleChange={setBadTvCycle}
+            psychCycle={psychCycle}
+            onPsychCycle={setPsychCycle}
+            onSongIdChange={setSongId}
+            currentSongId={songId}
+            currentLayout={layout}
+            onLayoutChange={setLayout}
           />
 
           {/* エフェクトカテゴリー選択（手動モードのみ表示） */}
@@ -454,7 +497,6 @@ export default function App() {
       >
         <Routes>
           <Route path="/" element={<FullCameraApp />} />
-          <Route path="/simple" element={<SimpleCameraPage />} />
         </Routes>
       </div>
     </Router>
