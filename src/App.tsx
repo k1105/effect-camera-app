@@ -19,6 +19,7 @@ import {getCategoryFromEffectId} from "./utils/effectCategoryUtils";
 import {OnPerformance} from "./components/layout/OnPerformance";
 import {BeginPerformance} from "./components/layout/BeginPerformance";
 import {NoSignal} from "./components/layout/NoSignal";
+import { isMobileDevice } from "./utils/deviceDetection";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 8; // スプライトシートから8つのエフェクトを読み込み
@@ -166,13 +167,14 @@ function FullCameraApp() {
   const requestPermissions = async () => {
     try {
       console.log("権限要求開始");
-
+      const width = isMobileDevice() ? 1920 : 1080;
+      const height = isMobileDevice() ? 1080 : 1920;
       // 基本制約で権限を要求
       const constraints = {
         video: {
           facingMode: "environment",
-          width: {ideal: 1080},
-          height: {ideal: 1920},
+          width: {ideal: width},
+          height: {ideal: height},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
@@ -233,11 +235,14 @@ function FullCameraApp() {
   const initializeCamera = async () => {
     try {
       /* -- a) カメラ -- */
+      const width = isMobileDevice() ? 1920 : 1080;
+      const height = isMobileDevice() ? 1080 : 1920;
+
       const cameraConstraints = {
         video: {
           facingMode: "environment",
-          width: {ideal: 1080},
-          height: {ideal: 1920},
+          width: {ideal: width},
+          height: {ideal: height},
           frameRate: {ideal: 30},
           zoom: zoom,
         },
