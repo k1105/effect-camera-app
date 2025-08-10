@@ -12,7 +12,6 @@ export const OnPerformance = ({
   current,
   ready,
   isNoSignalDetected,
-  cameraMode,
   onEffectChange,
   numEffects,
   currentCategory
@@ -25,7 +24,6 @@ export const OnPerformance = ({
         current={current}
         ready={ready}
         isNoSignalDetected={isNoSignalDetected}
-        cameraMode={cameraMode}
         onEffectChange={onEffectChange}
         numEffects={numEffects}
         currentCategory={currentCategory}

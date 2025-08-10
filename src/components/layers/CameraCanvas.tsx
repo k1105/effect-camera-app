@@ -1,5 +1,4 @@
 import {useEffect, useRef, useState} from "react";
-import {calculateEffectRenderData} from "../../utils/effectRenderer";
 import {getBadTVConfigForEffect} from "../../utils/badTVConfig";
 import {getPsychedelicConfigForEffect} from "../../utils/psychedelicConfig";
 import {getStaticConfigForEffect} from "../../utils/staticConfig";
@@ -10,7 +9,6 @@ import {
   drawQuad,
 } from "../../utils/webglUtils";
 import {initWebGL} from "../../utils/webGLInitializer";
-import type {CameraMode} from "../HamburgerMenu";
 // import {SongTitleCanvasOverlay} from "./SongTitleCanvasOverlay";
 
 export interface CameraCanvasProps {
@@ -19,7 +17,6 @@ export interface CameraCanvasProps {
   current: number;
   ready: boolean;
   isNoSignalDetected?: boolean;
-  cameraMode: CameraMode;
   onEffectChange?: (effect: number) => void;
   numEffects?: number;
   currentCategory?: "normal" | "badTV" | "psychedelic";
@@ -31,7 +28,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   current,
   ready,
   isNoSignalDetected = false,
-  cameraMode = "signal",
   onEffectChange,
   numEffects = 8,
 }) => {
@@ -42,7 +38,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
   const staticProgramRef = useRef<WebGLProgram | null>(null);
-  const [overlayOpacity, setOverlayOpacity] = useState(0.8);
   const [showEffectText, setShowEffectText] = useState(false);
   const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
@@ -62,11 +57,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   // タップハンドラー
   const handleCanvasTap = () => {
-    if (onEffectChange) {
-      // カテゴリー内での次のエフェクトに切り替え
-
-    }
-    
     setIsEffectOn(true);
     setEffectTriggerId(id => id + 1);
     setTimeout(() => setIsEffectOn(false), 500);
@@ -101,31 +91,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       return false;
     }
   };
-
-  // エフェクトが検出された時のオーバーレイフェードアウト
-  useEffect(() => {
-    if (!isNoSignalDetected && overlayOpacity > 0) {
-      const fadeOutDuration = 500;
-      const fadeOutSteps = 20;
-      const opacityStep = overlayOpacity / fadeOutSteps;
-      const stepDuration = fadeOutDuration / fadeOutSteps;
-
-      const fadeOutInterval = setInterval(() => {
-        setOverlayOpacity((prev) => {
-          const newOpacity = prev - opacityStep;
-          if (newOpacity <= 0) {
-            clearInterval(fadeOutInterval);
-            return 0;
-          }
-          return newOpacity;
-        });
-      }, stepDuration);
-
-      return () => clearInterval(fadeOutInterval);
-    } else if (isNoSignalDetected && overlayOpacity < 0.8) {
-      setOverlayOpacity(0.8);
-    }
-  }, [isNoSignalDetected, overlayOpacity]);
 
   useEffect(() => {
     if (!ready) return;
@@ -186,15 +151,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           raf = requestAnimationFrame(draw);
           return;
         }
-
-        // エフェクトの描画データを取得
-        const effectRenderData = calculateEffectRenderData({
-          current,
-          bitmaps,
-          canvasWidth: targetWidth,
-          canvasHeight: targetHeight,
-          currentTime,
-        });
 
         // カメラ映像を描画（PC版と同じエフェクトロジックを使用）
         const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -369,7 +325,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     bitmaps,
     videoRef,
     isNoSignalDetected,
-    cameraMode,
     onEffectChange,
     numEffects,
     effectTriggerId,
@@ -399,7 +354,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           width: "100vw",
           height: "100vh",
           backgroundColor: "rgba(0, 0, 0, 0.8)",
-          opacity: overlayOpacity,
+          opacity: 0,
           pointerEvents: "none",
           zIndex: 1,
           transition: "opacity 0.1s ease-out",
@@ -427,7 +382,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       )}
 
       {/* タップフィードバック */}
-      {showTapFeedback && cameraMode === "manual" && (
+      {showTapFeedback && (
         <div
           style={{
             position: "fixed",

@@ -39,13 +39,10 @@ function FullCameraApp() {
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [songId, setSongId] = useState(3); // Current song ID for overlay
   const [layout, setLayout] = useState<LayoutMode>("NoSignal");
-
-  // エフェクト周期の設定
-  const [isCycleOn, setIsCyclesOn] = useState(false);
-  const [badTvCycle, setBadTvCycle] = useState(3000);
-  const [psychCycle, setPsychCycle] = useState(7000);
   
   // エフェクト制御
+  const [isBeginSong, setIsBeginSong] = useState(false);
+
   const month = "08";
   const date = "10";
   const time = "18:00";
@@ -124,37 +121,46 @@ function FullCameraApp() {
     setIsPreviewMode(false);
   };
 
-  const handleEffectDetected = (effectId: number) => {
-    // 信号同期モードの場合のみエフェクトを切り替え
-    if (cameraMode === "signal") {
-      if (effectId === 14) {
-        setCurrent(effectId);
-        setLayout("BeginPerformance");
-      }
-      setCurrent(effectId);
+  const onBeginSignal = () => {
+    setLayout("BeginPerformance");
+    setIsBeginSong(true);
+    setTimeout(() => {
       setLayout("OnPerformance");
+      setIsBeginSong(false);
+    }, 3000);
+  }
+
+  const onFinnishSignal = () => {
+    setLayout("NoSignal");
+  }
+
+  const onNoSignal = () => {
+    setLayout("NoSignal");
+    setCurrent(-1);
+  }
+
+  const handleEffectDetected = (effectId: number) => {
+    setIsNoSignalDetected(false);
+    if (isBeginSong) return;
+    if (effectId === 14) {
+      onBeginSignal();
+      return;
     }
+    if (effectId === 15) {
+      onFinnishSignal();
+      return;
+    }
+    if(isHalfTimeEllapsed){
+      setCurrent(effectId + 10);
+      setLayout("OnPerformance");
+      return
+    }
+    setCurrent(effectId);
+    setLayout("OnPerformance");
   };
 
   const handleNoSignalDetected = () => {
-    // 信号同期モードの場合のみ信号なし状態を設定
-    if (cameraMode === "signal") {
-      //setIsNoSignalDetected(true); // 信号が検出されていない状態に設定
-      setLayout("NoSignal");
-    }
-  };
-
-  const handleModeChange = (mode: CameraMode) => {
-    setCameraMode(mode);
-    if (mode === "manual") {
-      // 手動モードに切り替えた時はデフォルトエフェクトを0に設定
-      setCurrent(0);
-      setIsNoSignalDetected(false); // 手動モードでは信号なし状態を解除
-    } else {
-      // 信号同期モードに切り替えた時は初期状態に戻す
-      setCurrent(-1);
-      setIsNoSignalDetected(true);
-    }
+    setIsNoSignalDetected(true);
   };
 
   const handleEffectChange = (effect: number) => {
@@ -165,11 +171,13 @@ function FullCameraApp() {
   const handleBeginSignal = () => {
     const timestamp = new Date().toLocaleTimeString();
     setSignalLog((prev) => [...prev, {timestamp, signal: "BEGIN"}]);
+    onBeginSignal();
   };
 
   const handleFinishSignal = () => {
     const timestamp = new Date().toLocaleTimeString();
     setSignalLog((prev) => [...prev, {timestamp, signal: "FINISH"}]);
+    onFinnishSignal();
   };
 
   const handleSimulatorIndexChange = (index: number) => {
@@ -322,6 +330,14 @@ function FullCameraApp() {
     };
   }, []);
 
+  // signal 
+
+  useEffect(() => {
+    if(isNoSignalDetected && !isBeginSong){
+      onNoSignal();
+    }
+  }, [isNoSignalDetected])
+
   /* ---------- UI ---------- */
   return (
     <>
@@ -408,7 +424,6 @@ function FullCameraApp() {
               current={current}
               ready={ready}
               isNoSignalDetected={isNoSignalDetected}
-              cameraMode={cameraMode}
               onEffectChange={handleEffectChange}
               numEffects={NUM_EFFECTS}
             />
@@ -421,10 +436,8 @@ function FullCameraApp() {
               current={current}
               ready={ready}
               isNoSignalDetected={isNoSignalDetected}
-              cameraMode={cameraMode}
               onEffectChange={handleEffectChange}
               numEffects={NUM_EFFECTS}
-              currentId={current}
               songId={songId}
             />
           )}
@@ -436,7 +449,6 @@ function FullCameraApp() {
               current={current}
               ready={ready}
               isNoSignalDetected={isNoSignalDetected}
-              cameraMode={cameraMode}
               onEffectChange={handleEffectChange}
               numEffects={NUM_EFFECTS}
             />

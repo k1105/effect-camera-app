@@ -3,8 +3,6 @@ import type { CameraMode } from "./HamburgerMenu";
 
 export interface SongTitleOverlayProps {
   songId: number;
-  cameraMode: CameraMode;
-  currentId: number;
 }
 
 const SONG_TITLES = [
@@ -28,12 +26,10 @@ const SONG_TITLES = [
 
 export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
   songId,
-  cameraMode,
-  currentId
 }) => {
   const [showImage, setShowImage] = useState(false);
   const isOutOfBound = songId < 0 || songId >= SONG_TITLES.length ? true : false;
-  const imagePath = cameraMode === 'signal' ? `/assets/song_title/${SONG_TITLES[currentId]}.png` : `/assets/song_title/${SONG_TITLES[songId]}.png`;
+  const imagePath = `/assets/song_title/${SONG_TITLES[songId]}.png`;
   useEffect(() => {
     const cycle = () => {
       // Show image for 1 second
@@ -42,20 +38,20 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({
       setTimeout(() => {
         // Hide image for 4 seconds
         setShowImage(false);
-      }, 1000);
+      }, 250);
     };
 
     // Start the cycle immediately
     cycle();
 
     // Set up the repeating cycle (5 seconds total: 1s show + 4s hide)
-    const interval = setInterval(cycle, 5000);
+    const interval = setInterval(cycle, 500);
 
     return () => {
       clearInterval(interval);
       setShowImage(false);
     };
-  }, [songId, currentId]);
+  }, [songId]);
 
   if (!showImage || isOutOfBound) {
     return null;
