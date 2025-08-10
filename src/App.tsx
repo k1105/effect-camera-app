@@ -44,6 +44,18 @@ function FullCameraApp() {
   const [isCycleOn, setIsCyclesOn] = useState(false);
   const [badTvCycle, setBadTvCycle] = useState(3000);
   const [psychCycle, setPsychCycle] = useState(7000);
+  
+  // エフェクト制御
+  const month = "08";
+  const date = "10";
+  const time = "18:00";
+  const startTime = new Date(`2025-${month}-${date}T${time}:00`).getTime();
+  const [ellapsedTime, setEllapsedTime] = useState(0);
+  const isHalfTimeEllapsed = ellapsedTime > 60;
+
+  setInterval(() => {
+    setEllapsedTime((Date.now() - startTime) / 1000 / 60);
+  }, 1000)
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
