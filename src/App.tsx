@@ -42,7 +42,6 @@ function FullCameraApp() {
   // エフェクト制御
   const isBeginingSongRef = useRef(false);
   const beginFlagRef = useRef(false);
-  const effectIdTrackingRef = useRef(current);
 
   const [countdownDate, setCountdownDate] = useState("2025-08-10");
   const [countdownTime, setCountdownTime] = useState("00:00");
@@ -348,13 +347,6 @@ function FullCameraApp() {
   useEffect(() => {
     setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
   }, [countdownDate, countdownTime]);
-
-  // effectTracking
-  useEffect(() => {
-    effectIdTrackingRef.current = current;
-    console.log("current:", current);
-    console.log("currentTracker:", effectIdTrackingRef.current);
-  }, [current])
 
   /* ---------- UI ---------- */
   return (
