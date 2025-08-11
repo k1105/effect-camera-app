@@ -1,6 +1,4 @@
 import {useEffect, useRef, useState} from "react";
-import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
-import {PreviewScreen} from "./components/PreviewScreen";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InitialScreen} from "./components/InitialScreen";
 import {
@@ -14,6 +12,7 @@ import {BeginPerformance} from "./components/layout/BeginPerformance";
 import {NoSignal} from "./components/layout/NoSignal";
 import {isMobileDevice} from "./utils/deviceDetection";
 import {CameraCanvas} from "./components/layers/CameraCanvas";
+import {Countdown} from "./components/layout/Countdown";
 
 /* ---------- 定数 ---------- */
 const NUM_EFFECTS = 16; // スプライトシートから8つのエフェクトを読み込み
@@ -27,8 +26,6 @@ function FullCameraApp() {
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(-1); // 初期値は-1（エフェクトなし）
   const [ready, setReady] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
@@ -54,22 +51,8 @@ function FullCameraApp() {
   // 新しいハンバーガーメニュー用のstate
   const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([]);
 
-  const downloadPhoto = () => {
-    if (!previewImage) return;
-
-    const link = document.createElement("a");
-    link.download = `photo-${new Date().toISOString()}.png`;
-    link.href = previewImage;
-    link.click();
-  };
-
-  const backToCamera = () => {
-    setPreviewImage(null);
-    setIsPreviewMode(false);
-  };
-
   const onBeginSignal = () => {
-    if (!beginFlagRef.current) {
+    if (!beginFlagRef.current && layout !== "Countdown") {
       setLayout("BeginPerformance");
       isBeginingSongRef.current = true;
       beginFlagRef.current = true;
@@ -81,12 +64,16 @@ function FullCameraApp() {
   };
 
   const onFinnishSignal = () => {
-    setLayout("NoSignal");
+    if (layout !== "Countdown") {
+      setLayout("NoSignal");
+    }
   };
 
   const onNoSignal = () => {
-    setLayout("NoSignal");
-    setCurrent(-1);
+    if (layout !== "Countdown") {
+      setLayout("NoSignal");
+      setCurrent(-1);
+    }
   };
 
   const handleEffectDetected = (effectId: number) => {
@@ -136,22 +123,6 @@ function FullCameraApp() {
   const handleSimulatorIndexChange = (index: number) => {
     beginFlagRef.current = current !== index ? false : true;
     setCurrent(index);
-  };
-
-  // レイアウト名を表示用の文字列に変換
-  const getLayoutDisplayName = (layout: LayoutMode): string => {
-    switch (layout) {
-      case "OnPerformance":
-        return "OnPerformance";
-      case "BeginPerformance":
-        return "BeginPerformance";
-      case "NoSignal":
-        return "NoSignal";
-      case "Countdown":
-        return "Countdown";
-      default:
-        return "Unknown";
-    }
   };
 
   // 権限要求関数
@@ -291,6 +262,16 @@ function FullCameraApp() {
     setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
   }, [countdownDate, countdownTime]);
 
+  useEffect(() => {
+    if (Date.now() < startTime) {
+      setLayout("Countdown");
+    }
+  }, [startTime]);
+
+  useEffect(() => {
+    console.log(layout);
+  }, [layout]);
+
   /* ---------- UI ---------- */
   return (
     <>
@@ -353,86 +334,80 @@ function FullCameraApp() {
         </div>
       )}
 
-      {isPreviewMode && previewImage ? (
-        <PreviewScreen
-          previewImage={previewImage}
-          onBack={backToCamera}
-          onDownload={downloadPhoto}
+      <>
+        <AudioReceiver
+          onEffectDetected={handleEffectDetected}
+          availableEffects={NUM_EFFECTS}
+          onNoSignalDetected={handleNoSignalDetected}
+          permissionsGranted={permissionsGranted}
         />
-      ) : (
-        <>
-          <AudioReceiver
-            onEffectDetected={handleEffectDetected}
-            availableEffects={NUM_EFFECTS}
-            onNoSignalDetected={handleNoSignalDetected}
-            permissionsGranted={permissionsGranted}
-          />
 
-          {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
+        {/* 初期画面 - 信号同期モードで信号が検出されていない時のみ表示 */}
 
-          <CameraCanvas
-            videoRef={videoRef}
-            bitmaps={bitmaps}
-            current={current}
-            ready={ready}
-            isNoSignalDetected={isNoSignalDetected}
-            onEffectChange={handleEffectChange}
-            numEffects={NUM_EFFECTS}
-          />
-
-          {layout === "OnPerformance" && <OnPerformance current={current} />}
-
-          {layout === "BeginPerformance" && (
-            <BeginPerformance songId={current} />
-          )}
-
-          {layout === "NoSignal" && <NoSignal />}
-
-          {!permissionsGranted && (
-            <InitialScreen
-              isVisible={isNoSignalDetected}
-              onRequestPermissions={requestPermissions}
-              showPermissionRequest={!permissionsGranted}
+        {layout === "Countdown" ? (
+          <Countdown startTime={startTime} />
+        ) : (
+          <>
+            <CameraCanvas
+              videoRef={videoRef}
+              bitmaps={bitmaps}
+              current={current}
+              ready={ready}
+              isNoSignalDetected={isNoSignalDetected}
+              onEffectChange={handleEffectChange}
+              numEffects={NUM_EFFECTS}
             />
-          )}
 
-          {/* ハンバーガーメニュー */}
-          <NewHamburgerMenu
-            currentState={getLayoutDisplayName(layout)}
-            currentIndex={current}
-            signalLog={signalLog}
-            onBeginSignal={handleBeginSignal}
-            onFinishSignal={handleFinishSignal}
-            onIndexChange={handleSimulatorIndexChange}
-            currentSimulatorIndex={current}
-            countdownDate={countdownDate}
-            countdownTime={countdownTime}
-            halfTime={halfTime}
-            onDateChange={setCountdownDate}
-            onTimeChange={setCountdownTime}
-            onHalfTimeChange={setHalfTime}
+            {layout === "OnPerformance" && <OnPerformance current={current} />}
+
+            {layout === "BeginPerformance" && (
+              <BeginPerformance songId={current} />
+            )}
+
+            {layout === "NoSignal" && <NoSignal />}
+          </>
+        )}
+
+        {!permissionsGranted && (
+          <InitialScreen
+            isVisible={isNoSignalDetected}
+            onRequestPermissions={requestPermissions}
+            showPermissionRequest={!permissionsGranted}
           />
-        </>
-      )}
+        )}
+
+        {/* ハンバーガーメニュー */}
+        <NewHamburgerMenu
+          currentState={layout}
+          currentIndex={current}
+          signalLog={signalLog}
+          onBeginSignal={handleBeginSignal}
+          onFinishSignal={handleFinishSignal}
+          onIndexChange={handleSimulatorIndexChange}
+          currentSimulatorIndex={current}
+          countdownDate={countdownDate}
+          countdownTime={countdownTime}
+          halfTime={halfTime}
+          onDateChange={setCountdownDate}
+          onTimeChange={setCountdownTime}
+          onHalfTimeChange={setHalfTime}
+        />
+      </>
     </>
   );
 }
 
 export default function App() {
   return (
-    <Router>
-      <div
-        style={{
-          width: "100vw",
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Routes>
-          <Route path="/" element={<FullCameraApp />} />
-        </Routes>
-      </div>
-    </Router>
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <FullCameraApp />
+    </div>
   );
 }
