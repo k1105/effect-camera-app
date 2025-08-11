@@ -57,10 +57,7 @@ function FullCameraApp() {
   }, 5000);
 
   // 新しいハンバーガーメニュー用のstate
-  const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([
-    {timestamp: "2025-08-10 00:00:00", signal: "BEGIN"},
-    {timestamp: "2025-08-10 00:00:00", signal: "FINISH"},
-  ]);
+  const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([]);
 
   /* ---------- カメラ制御関数 ---------- */
   const checkZoomSupport = async () => {
