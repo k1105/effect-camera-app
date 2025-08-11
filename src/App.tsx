@@ -122,7 +122,7 @@ function FullCameraApp() {
   };
 
   const onBeginSignal = () => {
-    if(!beginFlagRef.current) {
+    if (!beginFlagRef.current) {
       setLayout("BeginPerformance");
       isBeginingSongRef.current = true;
       beginFlagRef.current = true;
@@ -131,7 +131,7 @@ function FullCameraApp() {
         isBeginingSongRef.current = false;
       }, 7000);
     }
-  }
+  };
 
   const onFinnishSignal = () => {
     setLayout("NoSignal");
@@ -154,18 +154,18 @@ function FullCameraApp() {
       return;
     }
     if (isHalfTimeEllapsed) {
-      beginFlagRef.current = current !== effectId + 10 ? false : true; 
+      beginFlagRef.current = current !== effectId + 10 ? false : true;
       setCurrent(effectId + 10);
       setLayout("OnPerformance");
       return;
     }
-    beginFlagRef.current = current !== effectId ? false : true; 
+    beginFlagRef.current = current !== effectId ? false : true;
     setCurrent(effectId);
     setLayout("OnPerformance");
   };
 
   const handleNoSignalDetected = () => {
-    if(isBeginingSongRef.current) return;
+    if (isBeginingSongRef.current) return;
     setIsNoSignalDetected(true);
   };
 
@@ -187,6 +187,7 @@ function FullCameraApp() {
   };
 
   const handleSimulatorIndexChange = (index: number) => {
+    beginFlagRef.current = current !== index ? false : true;
     setCurrent(index);
   };
 
@@ -338,7 +339,7 @@ function FullCameraApp() {
 
   // signal
   useEffect(() => {
-    if(isNoSignalDetected && !isBeginingSongRef){
+    if (isNoSignalDetected && !isBeginingSongRef) {
       onNoSignal();
     }
   }, [isNoSignalDetected]);

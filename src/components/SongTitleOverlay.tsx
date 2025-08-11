@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import sexualConversation from "/txt/sexual-conversation.txt?raw";
+import sexualConversation from "/txt/tour-title.txt?raw";
 
 export interface SongTitleOverlayProps {
   songId: number;
