@@ -18,7 +18,6 @@ export interface CameraCanvasProps {
   isNoSignalDetected?: boolean;
   onEffectChange?: (effect: number) => void;
   numEffects?: number;
-  currentCategory?: "normal" | "badTV" | "psychedelic";
 }
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
@@ -36,22 +35,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
   const staticProgramRef = useRef<WebGLProgram | null>(null);
-  const [showEffectText, setShowEffectText] = useState(false);
-  const [effectTextOpacity, setEffectTextOpacity] = useState(0);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
   const [effectTriggerId, setEffectTriggerId] = useState(0);
   const [isEffectOn, setIsEffectOn] = useState(false);
-
-  // エフェクト切り替え時のテキスト表示
-  useEffect(() => {
-    if (ready && current >= 0) {
-      setShowEffectText(true);
-      setEffectTextOpacity(1.0);
-    } else {
-      setShowEffectText(false);
-      setEffectTextOpacity(0);
-    }
-  }, [current, ready]);
 
   // タップハンドラー
   const handleCanvasTap = () => {
@@ -89,16 +75,30 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       return false;
     }
   };
-
+  // WebGL初期化用のuseEffect
   useEffect(() => {
     if (!ready) return;
 
     const canvas = canvasRef.current!;
 
-    // WebGL初期化
     if (!glRef.current) {
       if (!initializeWebGL()) return;
     }
+
+    // canvasの解像度設定（固定解像度）
+    const targetWidth = 1080;
+    const targetHeight = 1920;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    if (glRef.current) {
+      glRef.current.viewport(0, 0, targetWidth, targetHeight);
+    }
+  }, [ready]);
+
+  // 描画ループ用のuseEffect
+  useEffect(() => {
+    if (!ready || !glRef.current) return;
 
     const gl = glRef.current!;
     const program = programRef.current!;
@@ -118,13 +118,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       console.error("WebGL initialization failed");
       return;
     }
-
-    // canvasの解像度設定（固定解像度）
-    const targetWidth = 1080;
-    const targetHeight = 1920;
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    gl.viewport(0, 0, targetWidth, targetHeight);
 
     let raf = 0;
 
@@ -227,10 +220,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             : getPsychedelicConfigForEffect(0);
 
           // サイケデリックシェーダーのユニフォームを設定
-          // const timeLocation = gl.getUniformLocation(
-          //   psychedelicProgramRef.current!,
-          //   "u_time"
-          // );
           const thermalIntensityLocation = gl.getUniformLocation(
             psychedelicProgramRef.current!,
             "u_thermalIntensity"
@@ -251,7 +240,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-          // gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
+
           gl.uniform1f(
             thermalIntensityLocation,
             psychedelicConfig.thermalIntensity
@@ -300,7 +289,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
         gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
 
         // 現在のフレームバッファをテクスチャとして使用してStaticShaderを適用
-        const frameBufferTexture = createTextureFromCanvas(gl, canvas);
+        const frameBufferTexture = createTextureFromCanvas(
+          gl,
+          canvasRef.current!
+        );
         drawQuad(gl, staticProgramRef.current!, identity, frameBufferTexture);
         gl.deleteTexture(frameBufferTexture);
 
@@ -355,26 +347,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           transition: "opacity 0.1s ease-out",
         }}
       />
-
-      {/* エフェクト名表示 */}
-      {showEffectText && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            color: "white",
-            fontSize: "24px",
-            fontWeight: "bold",
-            textAlign: "center",
-            pointerEvents: "none",
-            zIndex: 10,
-            opacity: effectTextOpacity,
-            transition: "opacity 0.3s ease-in-out",
-          }}
-        ></div>
-      )}
 
       {/* タップフィードバック */}
       {showTapFeedback && (

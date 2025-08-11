@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 
 export type LayoutMode =
   | "OnPerformance"
@@ -50,6 +50,25 @@ export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
   onHalfTimeChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // ローカル状態としてシミュレーター用のインデックスを管理
+  const [localSimulatorIndex, setLocalSimulatorIndex] = useState(
+    currentSimulatorIndex
+  );
+
+  // currentSimulatorIndexが変更されたときにローカル状態を更新
+  useEffect(() => {
+    setLocalSimulatorIndex(currentSimulatorIndex);
+  }, [currentSimulatorIndex]);
+
+  // セレクトボックスの変更ハンドラー
+  const handleIndexChange = (newIndex: number) => {
+    setLocalSimulatorIndex(newIndex);
+  };
+
+  // Sendボタンのハンドラー
+  const handleSendIndex = () => {
+    onIndexChange(localSimulatorIndex);
+  };
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -186,7 +205,7 @@ export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
                   No signals received
                 </div>
               ) : (
-                signalLog.map((entry, index) => (
+                signalLog.reverse().map((entry, index) => (
                   <div
                     key={index}
                     style={{
@@ -295,8 +314,8 @@ export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
                   Index:
                 </label>
                 <select
-                  value={currentSimulatorIndex}
-                  onChange={(e) => onIndexChange(Number(e.target.value))}
+                  value={localSimulatorIndex}
+                  onChange={(e) => handleIndexChange(Number(e.target.value))}
                   style={{
                     flex: 1,
                     padding: "8px 12px",
@@ -314,6 +333,15 @@ export const NewHamburgerMenu: React.FC<NewHamburgerMenuProps> = ({
                     </option>
                   ))}
                 </select>
+                <button
+                  onClick={handleSendIndex}
+                  style={{
+                    padding: "8px 12px",
+                    backgroundColor: "#007AFF",
+                  }}
+                >
+                  Send
+                </button>
               </div>
             </div>
           </div>

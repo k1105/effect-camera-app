@@ -14,7 +14,7 @@ import {CameraCanvas} from "./components/layers/CameraCanvas";
 import {Countdown} from "./components/layout/Countdown";
 
 /* ---------- 定数 ---------- */
-const NUM_EFFECTS = 16; // スプライトシートから8つのエフェクトを読み込み
+const NUM_EFFECTS = 16;
 
 function FullCameraApp() {
   /* ---------- Refs & State ---------- */
