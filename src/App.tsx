@@ -1,9 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import {PreviewScreen} from "./components/PreviewScreen";
-import {EffectSelector} from "./components/EffectSelector";
-
-import {ZoomControl} from "./components/ZoomControl";
 import {AudioReceiver} from "./components/AudioReceiver";
 import {InitialScreen} from "./components/InitialScreen";
 import {
@@ -30,8 +27,6 @@ function FullCameraApp() {
   const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(-1); // 初期値は-1（エフェクトなし）
   const [ready, setReady] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [isZoomSupported, setIsZoomSupported] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
@@ -58,51 +53,6 @@ function FullCameraApp() {
 
   // 新しいハンバーガーメニュー用のstate
   const [signalLog, setSignalLog] = useState<SignalLogEntry[]>([]);
-
-  /* ---------- カメラ制御関数 ---------- */
-  const checkZoomSupport = async () => {
-    if (!streamRef.current) return false;
-    const track = streamRef.current.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
-    const supported = !!capabilities.zoom;
-    setIsZoomSupported(supported);
-    return supported;
-  };
-
-  const handleZoom = async (newZoom: number) => {
-    if (!isZoomSupported) {
-      console.log("ズーム機能はこのデバイスではサポートされていません");
-      return;
-    }
-
-    // ズーム値を1.0から1.9の範囲に制限
-    const clampedZoom = Math.max(1.0, Math.min(1.9, newZoom));
-    setZoom(clampedZoom);
-
-    if (streamRef.current) {
-      const track = streamRef.current.getVideoTracks()[0];
-      try {
-        const capabilities = track.getCapabilities();
-        if (capabilities.zoom) {
-          // デバイスがサポートするズーム範囲を確認
-          const minZoom = capabilities.zoom.min || 1.0;
-          const maxZoom = Math.min(1.9, capabilities.zoom.max || 1.9);
-          const deviceClampedZoom = Math.max(
-            minZoom,
-            Math.min(maxZoom, clampedZoom)
-          );
-
-          await track.applyConstraints({
-            advanced: [{zoom: deviceClampedZoom}],
-          });
-        }
-      } catch (error) {
-        console.error("ズームの設定に失敗しました:", error);
-        // ズーム設定に失敗した場合は、前の値に戻す
-        setZoom(zoom);
-      }
-    }
-  };
 
   const downloadPhoto = () => {
     if (!previewImage) return;
@@ -217,7 +167,6 @@ function FullCameraApp() {
           width: {ideal: width},
           height: {ideal: height},
           frameRate: {ideal: 30},
-          zoom: zoom,
         },
         audio: {
           sampleRate: 44100,
@@ -285,7 +234,6 @@ function FullCameraApp() {
           width: {ideal: width},
           height: {ideal: height},
           frameRate: {ideal: 30},
-          zoom: zoom,
         },
       };
 
@@ -303,9 +251,6 @@ function FullCameraApp() {
         vid.onloadedmetadata = () => res();
       });
       await vid.play();
-
-      // ズーム機能のサポートを確認
-      await checkZoomSupport();
 
       /* -- b) エフェクト画像 -- */
       console.log("FullCameraApp: スプライトシートからエフェクト読み込み中...");
@@ -467,35 +412,6 @@ function FullCameraApp() {
             onTimeChange={setCountdownTime}
             onHalfTimeChange={setHalfTime}
           />
-
-          <div
-            className="controls"
-            style={{
-              position: "fixed",
-              bottom: 20,
-              left: 0,
-              right: 0,
-              display: "none",
-              pointerEvents: "none",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "10px",
-              zIndex: 1,
-            }}
-          >
-            <EffectSelector
-              effects={Array.from(
-                {length: NUM_EFFECTS},
-                (_, i) => `effect${i + 1}`
-              )}
-              current={current}
-              onChange={setCurrent}
-            />
-
-            {isZoomSupported && (
-              <ZoomControl zoom={zoom} onZoomChange={handleZoom} />
-            )}
-          </div>
         </>
       )}
     </>
