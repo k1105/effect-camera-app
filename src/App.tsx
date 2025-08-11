@@ -57,7 +57,10 @@ function FullCameraApp() {
       isBeginingSongRef.current = true;
       beginFlagRef.current = true;
       setTimeout(() => {
-        setLayout("OnPerformance");
+        // カウントダウン中でない場合のみレイアウト変更
+        setLayout((currentLayout) =>
+          currentLayout === "Countdown" ? "Countdown" : "OnPerformance"
+        );
         isBeginingSongRef.current = false;
       }, 7000);
     }
@@ -79,6 +82,7 @@ function FullCameraApp() {
   const handleEffectDetected = (effectId: number) => {
     setIsNoSignalDetected(false);
     if (isBeginingSongRef.current) return;
+    if (layout === "Countdown") return; // カウントダウン中は何もしない
     if (effectId === 14) {
       onBeginSignal();
       return;
@@ -104,23 +108,27 @@ function FullCameraApp() {
   };
 
   const handleEffectChange = (effect: number) => {
+    if (layout === "Countdown") return; // カウントダウン中は何もしない
     setCurrent(effect);
   };
 
   // 新しいハンバーガーメニュー用の関数
   const handleBeginSignal = () => {
+    if (layout === "Countdown") return; // カウントダウン中は何もしない
     const timestamp = new Date().toLocaleTimeString();
     setSignalLog((prev) => [...prev, {timestamp, signal: "BEGIN"}]);
     onBeginSignal();
   };
 
   const handleFinishSignal = () => {
+    if (layout === "Countdown") return; // カウントダウン中は何もしない
     const timestamp = new Date().toLocaleTimeString();
     setSignalLog((prev) => [...prev, {timestamp, signal: "FINISH"}]);
     onFinnishSignal();
   };
 
   const handleSimulatorIndexChange = (index: number) => {
+    if (layout === "Countdown") return; // カウントダウン中は何もしない
     beginFlagRef.current = current !== index ? false : true;
     setCurrent(index);
   };
@@ -262,6 +270,18 @@ function FullCameraApp() {
     setStartTime(new Date(`${countdownDate}T${countdownTime}:00`).getTime());
   }, [countdownDate, countdownTime]);
 
+  // カウントダウン完了チェック（1秒ごと）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Date.now() >= startTime && layout === "Countdown") {
+        setLayout("NoSignal");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime, layout]);
+
+  // カウントダウン開始時の処理
   useEffect(() => {
     if (Date.now() < startTime) {
       setLayout("Countdown");
