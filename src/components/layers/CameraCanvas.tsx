@@ -328,20 +328,6 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           onPointerDown={handlePointerDown}
         />
       </div>
-      <style>
-        {`
-          @keyframes tapFeedback {
-            0% {
-              transform: translate(-50%, -50%) scale(0);
-              opacity: 1;
-            }
-            100% {
-              transform: translate(-50%, -50%) scale(2);
-              opacity: 0;
-            }
-          }
-        `}
-      </style>
     </>
   );
 };
