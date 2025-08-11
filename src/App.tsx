@@ -6,7 +6,6 @@ import {
   type SignalLogEntry,
 } from "./components/NewHamburgerMenu";
 import type {LayoutMode} from "./components/NewHamburgerMenu";
-import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {OnPerformance} from "./components/layout/OnPerformance";
 import {BeginPerformance} from "./components/layout/BeginPerformance";
 import {NoSignal} from "./components/layout/NoSignal";
@@ -23,7 +22,6 @@ function FullCameraApp() {
   const initedRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [bitmaps, setBitmaps] = useState<ImageBitmap[]>([]);
   const [current, setCurrent] = useState(-1); // 初期値は-1（エフェクトなし）
   const [ready, setReady] = useState(false);
   const [isNoSignalDetected, setIsNoSignalDetected] = useState(true); // 初期状態では信号なし
@@ -231,10 +229,6 @@ function FullCameraApp() {
       });
       await vid.play();
 
-      /* -- b) エフェクト画像 -- */
-      console.log("FullCameraApp: スプライトシートからエフェクト読み込み中...");
-      const imgs = await loadEffectsFromSpriteSheet();
-      setBitmaps(imgs);
       setReady(true);
     } catch (error) {
       console.error("カメラ初期化に失敗しました:", error);
@@ -370,7 +364,6 @@ function FullCameraApp() {
           <>
             <CameraCanvas
               videoRef={videoRef}
-              bitmaps={bitmaps}
               current={current}
               ready={ready}
               isNoSignalDetected={isNoSignalDetected}

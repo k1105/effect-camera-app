@@ -13,7 +13,6 @@ import {initWebGL} from "../../utils/webGLInitializer";
 
 export interface CameraCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
-  bitmaps: ImageBitmap[];
   current: number;
   ready: boolean;
   isNoSignalDetected?: boolean;
@@ -24,7 +23,6 @@ export interface CameraCanvasProps {
 
 export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   videoRef,
-  bitmaps,
   current,
   ready,
   isNoSignalDetected = false,
@@ -58,7 +56,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   // タップハンドラー
   const handleCanvasTap = () => {
     setIsEffectOn(true);
-    setEffectTriggerId(id => id + 1);
+    setEffectTriggerId((id) => id + 1);
     setTimeout(() => setIsEffectOn(false), 500);
 
     // タップフィードバックを表示
@@ -160,10 +158,9 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.useProgram(badTVProgramRef.current!);
 
           // エフェクトIDに基づいてBad TV設定を取得
-          const badTVConfig =
-            isEffectOn
-              ? getBadTVConfigForEffect(current)
-              : getBadTVConfigForEffect(0);
+          const badTVConfig = isEffectOn
+            ? getBadTVConfigForEffect(current)
+            : getBadTVConfigForEffect(0);
 
           // Bad TV Shaderのユニフォームを設定
           const timeLocation = gl.getUniformLocation(
@@ -218,17 +215,16 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           );
 
           drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
-        } 
+        }
 
         if (isEffectOn && effectTriggerId % 6 === 0) {
           // サイケデリックシェーダーでカメラ映像を描画
           gl.useProgram(psychedelicProgramRef.current!);
 
           // エフェクトIDに基づいてサイケデリック設定を取得
-          const psychedelicConfig =
-            isEffectOn
-              ? getPsychedelicConfigForEffect(current)
-              : getPsychedelicConfigForEffect(0);
+          const psychedelicConfig = isEffectOn
+            ? getPsychedelicConfigForEffect(current)
+            : getPsychedelicConfigForEffect(0);
 
           // サイケデリックシェーダーのユニフォームを設定
           // const timeLocation = gl.getUniformLocation(
@@ -255,7 +251,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
             psychedelicProgramRef.current!,
             "u_glowIntensity"
           );
-         // gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
+          // gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
           gl.uniform1f(
             thermalIntensityLocation,
             psychedelicConfig.thermalIntensity
@@ -272,7 +268,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
 
           drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
-        } 
+        }
 
         if (!isEffectOn) {
           // 通常のシェーダーでカメラ映像を描画
@@ -322,13 +318,12 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   }, [
     ready,
     current,
-    bitmaps,
     videoRef,
     isNoSignalDetected,
     onEffectChange,
     numEffects,
     effectTriggerId,
-    isEffectOn
+    isEffectOn,
   ]);
 
   return (

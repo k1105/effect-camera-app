@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import aspLogo from "../assets/asp-logo.png";
+import aspLogo from "/assets/asp-logo.png";
 import "./InitialScreen.css";
 
 interface BeforeInstallPromptEvent extends Event {
