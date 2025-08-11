@@ -61,7 +61,14 @@ export const getPsychedelicConfigForEffect = (
     case 6:
       return psychedelicPresets.intense; // エフェクト6: 強烈（循環）
     case 7:
-      return psychedelicPresets.extreme; // エフェクト7: 極端（循環）
+      // エフェクト7: 複合エフェクト用の特別な設定
+      return {
+        thermalIntensity: 0.85,    // 強い熱効果
+        contrastIntensity: 0.95,   // 強いコントラスト
+        psychedelicSpeed: 0.7,     // 中程度の速度
+        channelShift: 0.7,         // 強いチャンネルシフト
+        glowIntensity: 0.9,        // 強いグロー効果
+      };
     default:
       // デフォルトでは微細プリセットを使用
       return psychedelicPresets.subtle;

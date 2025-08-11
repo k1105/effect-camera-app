@@ -176,7 +176,6 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({songId}) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(0, 0, 0, 0.8)",
       }}
     >
       <div

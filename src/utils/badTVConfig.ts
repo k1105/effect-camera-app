@@ -14,7 +14,7 @@ export const defaultBadTVConfig: BadTVConfig = {
   distortion: 3.0, // 太い歪み
   distortion2: 5.0, // 細かい歪み
   speed: 0.2, // 歪みの垂直移動速度
-  rollSpeed: 0.1, // 垂直ロール速度
+  rollSpeed: 0, // 垂直ロール速度
   chromaticAberration: 0.5, // 色収差
   interlaceIntensity: 0.3, // インターレース
   interlaceLineWidth: 2.0, // インターレースの線幅
@@ -26,7 +26,7 @@ export const badTVPresets = {
     distortion: 1.0,
     distortion2: 2.0,
     speed: 0.1,
-    rollSpeed: 0.05,
+    rollSpeed: 0,
     chromaticAberration: 0.2,
     interlaceIntensity: 1.0, // インターレース効果を無効化（1.0 = 100%明度）
     interlaceLineWidth: 1.0,
@@ -35,7 +35,7 @@ export const badTVPresets = {
     distortion: 3.0,
     distortion2: 5.0,
     speed: 0.2,
-    rollSpeed: 0.1,
+    rollSpeed: 0,
     chromaticAberration: 0.5,
     interlaceIntensity: 0.3,
     interlaceLineWidth: 2.0,
@@ -44,7 +44,7 @@ export const badTVPresets = {
     distortion: 6.0,
     distortion2: 8.0,
     speed: 0.3,
-    rollSpeed: 0.2,
+    rollSpeed: 0,
     chromaticAberration: 0.8,
     interlaceIntensity: 0.6,
     interlaceLineWidth: 4.0,
@@ -88,7 +88,16 @@ export const getBadTVConfigForEffect = (effectId: number): BadTVConfig => {
     case 6:
       return badTVPresets.heavy; // エフェクト6: 強烈（循環）
     case 7:
-      return badTVPresets.extreme; // エフェクト7: 極端（循環）
+      // エフェクト7: 複合エフェクト用の特別な設定
+      return {
+        distortion: 8.0, // 強い歪み
+        distortion2: 9.0, // 強い細かい歪み
+        speed: 0.4, // 中程度の速度
+        rollSpeed: 0.15, // 中程度のロール
+        chromaticAberration: 0.9, // 強い色収差
+        interlaceIntensity: 0.4, // 中程度のインターレース
+        interlaceLineWidth: 6.0, // 太いインターレース
+      };
     default:
       // デフォルトでは微細プリセットを使用
       return badTVPresets.subtle;

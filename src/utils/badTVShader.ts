@@ -107,13 +107,71 @@ export const badTVFragmentShader = `
 `;
 
 export interface BadTVUniforms {
-  time: number;
   distortion: number;
+  distortion2: number;
   speed: number;
+  rollSpeed: number;
+  chromaticAberration: number;
+  interlaceIntensity: number;
+  interlaceLineWidth: number;
 }
 
 export const defaultBadTVUniforms: BadTVUniforms = {
-  time: 0,
   distortion: 0.001,
+  distortion2: 0.001,
   speed: 0.001,
+  rollSpeed: 0.001,
+  chromaticAberration: 0.001,
+  interlaceIntensity: 1.0,
+  interlaceLineWidth: 1.0,
+};
+
+// Bad TVシェーダーの適用を一元管理するユーティリティ
+export interface BadTVShaderContext {
+  gl: WebGLRenderingContext;
+  program: WebGLProgram;
+  time: number;
+  config: BadTVUniforms;
+}
+
+export const applyBadTVShader = (context: BadTVShaderContext): void => {
+  const {gl, program, time, config} = context;
+
+  // シェーダープログラムを使用
+  gl.useProgram(program);
+
+  // ユニフォーム変数を設定
+  const timeLocation = gl.getUniformLocation(program, "u_time");
+  const distortionLocation = gl.getUniformLocation(program, "u_distortion");
+  const distortion2Location = gl.getUniformLocation(program, "u_distortion2");
+  const speedLocation = gl.getUniformLocation(program, "u_speed");
+  const rollSpeedLocation = gl.getUniformLocation(program, "u_rollSpeed");
+  const chromaticAberrationLocation = gl.getUniformLocation(
+    program,
+    "u_chromaticAberration"
+  );
+  const interlaceIntensityLocation = gl.getUniformLocation(
+    program,
+    "u_interlaceIntensity"
+  );
+  const interlaceLineWidthLocation = gl.getUniformLocation(
+    program,
+    "u_interlaceLineWidth"
+  );
+
+  if (timeLocation) gl.uniform1f(timeLocation, time);
+  if (distortionLocation) gl.uniform1f(distortionLocation, config.distortion);
+  if (distortion2Location)
+    gl.uniform1f(distortion2Location, config.distortion2);
+  if (speedLocation) gl.uniform1f(speedLocation, config.speed);
+  if (rollSpeedLocation) gl.uniform1f(rollSpeedLocation, config.rollSpeed);
+  if (chromaticAberrationLocation)
+    gl.uniform1f(chromaticAberrationLocation, config.chromaticAberration);
+  if (interlaceIntensityLocation)
+    gl.uniform1f(interlaceIntensityLocation, config.interlaceIntensity);
+  if (interlaceLineWidthLocation)
+    gl.uniform1f(interlaceLineWidthLocation, config.interlaceLineWidth);
+
+  // シェーダーの設定が完了
+  // テクスチャの描画は呼び出し側で行う
 };

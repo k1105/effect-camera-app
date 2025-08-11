@@ -108,3 +108,55 @@ export interface PsychedelicConfig {
   channelShift: number; // チャンネルシフトの強度 (0.0 - 1.0)
   glowIntensity: number; // グロー効果の強度 (0.0 - 1.0)
 }
+
+// サイケデリックシェーダーの適用を一元管理するユーティリティ
+export interface PsychedelicShaderContext {
+  gl: WebGLRenderingContext;
+  program: WebGLProgram;
+  time: number;
+  config: PsychedelicConfig;
+}
+
+export const applyPsychedelicShader = (
+  context: PsychedelicShaderContext
+): void => {
+  const {gl, program, time, config} = context;
+
+  // シェーダープログラムを使用
+  gl.useProgram(program);
+
+  // ユニフォーム変数を設定
+  const timeLocation = gl.getUniformLocation(program, "u_time");
+  const thermalIntensityLocation = gl.getUniformLocation(
+    program,
+    "u_thermalIntensity"
+  );
+  const contrastIntensityLocation = gl.getUniformLocation(
+    program,
+    "u_contrastIntensity"
+  );
+  const psychedelicSpeedLocation = gl.getUniformLocation(
+    program,
+    "u_psychedelicSpeed"
+  );
+  const channelShiftLocation = gl.getUniformLocation(program, "u_channelShift");
+  const glowIntensityLocation = gl.getUniformLocation(
+    program,
+    "u_glowIntensity"
+  );
+
+  if (timeLocation) gl.uniform1f(timeLocation, time);
+  if (thermalIntensityLocation)
+    gl.uniform1f(thermalIntensityLocation, config.thermalIntensity);
+  if (contrastIntensityLocation)
+    gl.uniform1f(contrastIntensityLocation, config.contrastIntensity);
+  if (psychedelicSpeedLocation)
+    gl.uniform1f(psychedelicSpeedLocation, config.psychedelicSpeed);
+  if (channelShiftLocation)
+    gl.uniform1f(channelShiftLocation, config.channelShift);
+  if (glowIntensityLocation)
+    gl.uniform1f(glowIntensityLocation, config.glowIntensity);
+
+  // シェーダーの設定が完了
+  // テクスチャの描画は呼び出し側で行う
+};

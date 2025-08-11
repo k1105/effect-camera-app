@@ -11,6 +11,7 @@ import {
   psychedelicVertexShader,
   psychedelicFragmentShader,
 } from "./psychedelicShader";
+import {mosaicVertexShader, mosaicFragmentShader} from "./mosaicShader";
 
 export interface WebGLPrograms {
   program: WebGLProgram | null;
@@ -18,6 +19,7 @@ export interface WebGLPrograms {
   badTVProgram: WebGLProgram | null;
   psychedelicProgram: WebGLProgram | null;
   staticProgram: WebGLProgram | null;
+  mosaicProgram: WebGLProgram | null;
 }
 
 // WebGL初期化
@@ -38,6 +40,7 @@ export const initWebGL = (
           badTVProgram: null,
           psychedelicProgram: null,
           staticProgram: null,
+          mosaicProgram: null,
         },
       };
     }
@@ -84,6 +87,16 @@ export const initWebGL = (
       gl.FRAGMENT_SHADER,
       staticFragmentShader
     );
+    const mosaicVertexShaderObj = createShader(
+      gl,
+      gl.VERTEX_SHADER,
+      mosaicVertexShader
+    );
+    const mosaicFragmentShaderObj = createShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      mosaicFragmentShader
+    );
 
     if (
       !vertexShader ||
@@ -94,7 +107,9 @@ export const initWebGL = (
       !psychedelicVertexShaderObj ||
       !psychedelicFragmentShaderObj ||
       !staticVertexShaderObj ||
-      !staticFragmentShaderObj
+      !staticFragmentShaderObj ||
+      !mosaicVertexShaderObj ||
+      !mosaicFragmentShaderObj
     ) {
       console.error("Shader creation failed");
       return {
@@ -105,6 +120,7 @@ export const initWebGL = (
           badTVProgram: null,
           psychedelicProgram: null,
           staticProgram: null,
+          mosaicProgram: null,
         },
       };
     }
@@ -127,13 +143,19 @@ export const initWebGL = (
       staticVertexShaderObj,
       staticFragmentShaderObj
     );
+    const mosaicProgram = createProgram(
+      gl,
+      mosaicVertexShaderObj,
+      mosaicFragmentShaderObj
+    );
 
     if (
       !program ||
       !blendProgram ||
       !badTVProgram ||
       !psychedelicProgram ||
-      !staticProgram
+      !staticProgram ||
+      !mosaicProgram
     ) {
       console.error("Program creation failed");
       return {
@@ -144,6 +166,7 @@ export const initWebGL = (
           badTVProgram: null,
           psychedelicProgram: null,
           staticProgram: null,
+          mosaicProgram: null,
         },
       };
     }
@@ -161,6 +184,7 @@ export const initWebGL = (
         badTVProgram,
         psychedelicProgram,
         staticProgram,
+        mosaicProgram,
       },
     };
   } catch (error) {
@@ -173,6 +197,7 @@ export const initWebGL = (
         badTVProgram: null,
         psychedelicProgram: null,
         staticProgram: null,
+        mosaicProgram: null,
       },
     };
   }

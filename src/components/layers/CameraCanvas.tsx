@@ -1,7 +1,10 @@
 import {useEffect, useRef, useState} from "react";
 import {getBadTVConfigForEffect} from "../../utils/badTVConfig";
 import {getPsychedelicConfigForEffect} from "../../utils/psychedelicConfig";
-import {getStaticConfigForEffect} from "../../utils/staticConfig";
+import {getMosaicConfigForEffect} from "../../utils/mosaicConfig";
+import {applyBadTVShader} from "../../utils/badTVShader";
+import {applyPsychedelicShader} from "../../utils/psychedelicShader";
+import {applyMosaicShader} from "../../utils/mosaicShader";
 
 import {
   createTexture,
@@ -34,7 +37,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const blendProgramRef = useRef<WebGLProgram | null>(null);
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
-  const staticProgramRef = useRef<WebGLProgram | null>(null);
+  const mosaicProgramRef = useRef<WebGLProgram | null>(null);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
   const [effectTriggerId, setEffectTriggerId] = useState(0);
   const [isEffectOn, setIsEffectOn] = useState(false);
@@ -48,6 +51,65 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     // タップフィードバックを表示
     setShowTapFeedback(true);
     setTimeout(() => setShowTapFeedback(false), 300);
+  };
+
+  // エフェクト定義の型
+  interface EffectDefinition {
+    type: "badTV" | "psychedelic" | "mosaic" | "normal";
+    badTVIntensity?: "subtle" | "moderate" | "heavy" | "extreme";
+    psychedelicIntensity?: "subtle" | "moderate" | "intense" | "extreme";
+    mosaicIntensity?: "subtle" | "moderate" | "heavy" | "extreme";
+    isComposite?: boolean; // 複合エフェクトかどうか
+    description?: string; // エフェクトの説明（デバッグ用）
+  }
+
+  // エフェクト定義の一元管理
+  const effectDefinitions: Record<number, EffectDefinition> = {
+    0: {
+      type: "normal",
+      description: "エフェクトなし - 通常表示",
+    },
+    1: {
+      type: "badTV",
+      badTVIntensity: "moderate",
+      description: "Bad TV - 中程度の歪み効果",
+    },
+    2: {
+      type: "badTV",
+      badTVIntensity: "heavy",
+      description: "Bad TV - 強烈な歪み効果",
+    },
+    3: {
+      type: "psychedelic",
+      psychedelicIntensity: "moderate",
+      description: "サイケデリック - 中程度の色彩効果",
+    },
+    4: {
+      type: "psychedelic",
+      psychedelicIntensity: "intense",
+      description: "サイケデリック - 強烈な色彩効果",
+    },
+    5: {
+      type: "mosaic",
+      mosaicIntensity: "moderate",
+      description: "モザイク - 中程度のモザイク効果",
+    },
+    6: {
+      type: "mosaic",
+      mosaicIntensity: "heavy",
+      description: "モザイク - 強烈なモザイク効果",
+    },
+    7: {
+      type: "badTV",
+      badTVIntensity: "extreme",
+      isComposite: true, // 複合エフェクトとして扱う
+      description: "複合エフェクト - Bad TV + サイケデリック + モザイク",
+    },
+  };
+
+  // currentの値に基づいて適用するエフェクトを決定
+  const getEffectTypeForCurrent = (currentValue: number): EffectDefinition => {
+    return effectDefinitions[currentValue] || effectDefinitions[0];
   };
 
   // WebGL初期化
@@ -66,7 +128,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       blendProgramRef.current = result.programs.blendProgram;
       badTVProgramRef.current = result.programs.badTVProgram;
       psychedelicProgramRef.current = result.programs.psychedelicProgram;
-      staticProgramRef.current = result.programs.staticProgram;
+      mosaicProgramRef.current = result.programs.mosaicProgram;
 
       console.log("WebGL initialized successfully");
       return true;
@@ -105,7 +167,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     const blendProgram = blendProgramRef.current!;
     const badTVProgram = badTVProgramRef.current!;
     const psychedelicProgram = psychedelicProgramRef.current!;
-    const staticProgram = staticProgramRef.current!;
+    const mosaicProgram = mosaicProgramRef.current!;
 
     if (
       !gl ||
@@ -113,7 +175,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       !blendProgram ||
       !badTVProgram ||
       !psychedelicProgram ||
-      !staticProgram
+      !mosaicProgram
     ) {
       console.error("WebGL initialization failed");
       return;
@@ -143,120 +205,59 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           return;
         }
 
-        // カメラ映像を描画（PC版と同じエフェクトロジックを使用）
+        // カメラ映像を描画（currentの値に基づいてエフェクトを適用）
         const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+        const effectDef = getEffectTypeForCurrent(current);
 
         if (isEffectOn) {
-          // Bad TV Shaderでカメラ映像を描画
-          gl.useProgram(badTVProgramRef.current!);
+          // Bad TVエフェクトの適用
+          if (effectDef.type === "badTV") {
+            const badTVConfig = getBadTVConfigForEffect(current);
 
-          // エフェクトIDに基づいてBad TV設定を取得
-          const badTVConfig = isEffectOn
-            ? getBadTVConfigForEffect(current)
-            : getBadTVConfigForEffect(0);
+            // シェーダーの設定をシェーダーファイルに委譲
+            applyBadTVShader({
+              gl,
+              program: badTVProgramRef.current!,
+              time: (currentTime % 10000) * 0.001,
+              config: badTVConfig,
+            });
 
-          // Bad TV Shaderのユニフォームを設定
-          const timeLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_time"
-          );
-          const distortionLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_distortion"
-          );
-          const distortion2Location = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_distortion2"
-          );
-          const speedLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_speed"
-          );
-          const rollSpeedLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_rollSpeed"
-          );
-          const chromaticAberrationLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_chromaticAberration"
-          );
-          const interlaceIntensityLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_interlaceIntensity"
-          );
-          const interlaceLineWidthLocation = gl.getUniformLocation(
-            badTVProgramRef.current!,
-            "u_interlaceLineWidth"
-          );
+            drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
+          }
 
-          gl.uniform1f(timeLocation, (currentTime % 10000) * 0.001);
-          gl.uniform1f(distortionLocation, badTVConfig.distortion);
-          gl.uniform1f(distortion2Location, badTVConfig.distortion2);
-          gl.uniform1f(speedLocation, badTVConfig.speed);
-          gl.uniform1f(rollSpeedLocation, badTVConfig.rollSpeed);
-          gl.uniform1f(
-            chromaticAberrationLocation,
-            badTVConfig.chromaticAberration
-          );
-          gl.uniform1f(
-            interlaceIntensityLocation,
-            badTVConfig.interlaceIntensity
-          );
-          gl.uniform1f(
-            interlaceLineWidthLocation,
-            badTVConfig.interlaceLineWidth
-          );
+          // サイケデリックエフェクトの適用
+          if (effectDef.type === "psychedelic" || effectDef.isComposite) {
+            const psychedelicConfig = getPsychedelicConfigForEffect(current);
 
-          drawQuad(gl, badTVProgramRef.current!, identity, videoTexture);
-        }
+            // シェーダーの設定をシェーダーファイルに委譲
+            applyPsychedelicShader({
+              gl,
+              program: psychedelicProgramRef.current!,
+              time: (currentTime % 10000) * 0.001,
+              config: psychedelicConfig,
+            });
 
-        if (isEffectOn && effectTriggerId % 6 === 0) {
-          // サイケデリックシェーダーでカメラ映像を描画
-          gl.useProgram(psychedelicProgramRef.current!);
+            drawQuad(
+              gl,
+              psychedelicProgramRef.current!,
+              identity,
+              videoTexture
+            );
+          }
 
-          // エフェクトIDに基づいてサイケデリック設定を取得
-          const psychedelicConfig = isEffectOn
-            ? getPsychedelicConfigForEffect(current)
-            : getPsychedelicConfigForEffect(0);
+          // モザイクエフェクトの適用
+          if (effectDef.type === "mosaic" || effectDef.isComposite) {
+            const mosaicConfig = getMosaicConfigForEffect(current);
 
-          // サイケデリックシェーダーのユニフォームを設定
-          const thermalIntensityLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_thermalIntensity"
-          );
-          const contrastIntensityLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_contrastIntensity"
-          );
-          const psychedelicSpeedLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_psychedelicSpeed"
-          );
-          const channelShiftLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_channelShift"
-          );
-          const glowIntensityLocation = gl.getUniformLocation(
-            psychedelicProgramRef.current!,
-            "u_glowIntensity"
-          );
+            // シェーダーの設定をシェーダーファイルに委譲
+            applyMosaicShader({
+              gl,
+              program: mosaicProgramRef.current!,
+              config: mosaicConfig,
+            });
 
-          gl.uniform1f(
-            thermalIntensityLocation,
-            psychedelicConfig.thermalIntensity
-          );
-          gl.uniform1f(
-            contrastIntensityLocation,
-            psychedelicConfig.contrastIntensity
-          );
-          gl.uniform1f(
-            psychedelicSpeedLocation,
-            psychedelicConfig.psychedelicSpeed
-          );
-          gl.uniform1f(channelShiftLocation, psychedelicConfig.channelShift);
-          gl.uniform1f(glowIntensityLocation, psychedelicConfig.glowIntensity);
-
-          drawQuad(gl, psychedelicProgramRef.current!, identity, videoTexture);
+            drawQuad(gl, mosaicProgramRef.current!, identity, videoTexture);
+          }
         }
 
         if (!isEffectOn) {
@@ -264,37 +265,39 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           drawQuad(gl, program, identity, videoTexture);
         }
 
-        // Static Shaderを別レイヤーとしてオーバーレイ
-        const staticConfig =
-          effectTriggerId % 4 === 0 && isEffectOn
-            ? getStaticConfigForEffect(current)
-            : getStaticConfigForEffect(0);
-        gl.useProgram(staticProgramRef.current!);
+        // モザイクシェーダーを別レイヤーとしてオーバーレイ（currentの値に基づいて適用）
+        if (
+          isEffectOn &&
+          (effectDef.type === "mosaic" || effectDef.isComposite)
+        ) {
+          const mosaicConfig = getMosaicConfigForEffect(current);
 
-        const staticTimeLocation = gl.getUniformLocation(
-          staticProgramRef.current!,
-          "u_time"
-        );
-        const staticIntensityLocation = gl.getUniformLocation(
-          staticProgramRef.current!,
-          "u_staticIntensity"
-        );
-        const staticSizeLocation = gl.getUniformLocation(
-          staticProgramRef.current!,
-          "u_staticSize"
-        );
+          console.log("Applying mosaic effect:", {
+            current,
+            effectDef,
+            mosaicConfig,
+            isEffectOn,
+          });
 
-        gl.uniform1f(staticTimeLocation, (currentTime % 1000) * 0.001);
-        gl.uniform1f(staticIntensityLocation, staticConfig.staticIntensity);
-        gl.uniform1f(staticSizeLocation, staticConfig.staticSize);
+          // シェーダーの設定をシェーダーファイルに委譲
+          applyMosaicShader({
+            gl,
+            program: mosaicProgramRef.current!,
+            config: mosaicConfig,
+          });
 
-        // 現在のフレームバッファをテクスチャとして使用してStaticShaderを適用
-        const frameBufferTexture = createTextureFromCanvas(
-          gl,
-          canvasRef.current!
-        );
-        drawQuad(gl, staticProgramRef.current!, identity, frameBufferTexture);
-        gl.deleteTexture(frameBufferTexture);
+          // 現在のフレームバッファをテクスチャとして使用してモザイクシェーダーを適用
+          const frameBufferTexture = createTextureFromCanvas(
+            gl,
+            canvasRef.current!
+          );
+
+          // モザイクシェーダーで描画
+          drawQuad(gl, mosaicProgramRef.current!, identity, frameBufferTexture);
+
+          // テクスチャを解放
+          gl.deleteTexture(frameBufferTexture);
+        }
 
         // カメラ映像テクスチャを解放
         gl.deleteTexture(videoTexture);

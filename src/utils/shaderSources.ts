@@ -111,12 +111,37 @@ export const staticFragmentShader = `
     vec2 p = v_texCoord;
     vec4 color = texture2D(u_texture, p);
     
+    // カメラ映像の色を保持
+    vec3 finalColor = color.rgb;
+    
+    // スタティック効果が無効な場合は、カメラ映像をそのまま表示
+    if (u_staticIntensity <= 0.0) {
+      gl_FragColor = color;
+      return;
+    }
+    
     // Calculate noise based on screen coordinates and size
     float xs = floor(gl_FragCoord.x / u_staticSize);
     float ys = floor(gl_FragCoord.y / u_staticSize);
-    vec4 snow = vec4(rand(vec2(xs * u_time, ys * u_time)) * u_staticIntensity);
+    float noise = rand(vec2(xs * u_time, ys * u_time));
     
-    // Additive blending
-    gl_FragColor = color + snow;
+    // ノイズの強度を制御（0.0-1.0の範囲）
+    float noiseIntensity = noise * u_staticIntensity;
+    
+    // 安全なノイズオーバーレイ：カメラ映像を保持しながらノイズを追加
+    if (noiseIntensity > 0.05) {
+      // ノイズの色（白っぽい、強度を制限）
+      vec3 noiseColor = vec3(noiseIntensity * 0.6);
+      
+      // カメラ映像とノイズを適切にブレンド
+      // ノイズが強すぎないように制限（最大30%まで）
+      float blendFactor = min(noiseIntensity * 0.3, 0.3);
+      finalColor = mix(color.rgb, noiseColor, blendFactor);
+    }
+    
+    // 最終的な色を適切に制限（カメラ映像が暗くなりすぎないように）
+    finalColor = clamp(finalColor, 0.0, 1.0);
+    
+    gl_FragColor = vec4(finalColor, color.a);
   }
 `;
