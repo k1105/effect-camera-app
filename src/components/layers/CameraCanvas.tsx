@@ -1,8 +1,10 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import {getBadTVConfigForEffect} from "../../utils/badTVConfig";
 import {getPsychedelicConfigForEffect} from "../../utils/psychedelicConfig";
+import {getMosaicConfigForEffect} from "../../utils/mosaicConfig";
 import {applyBadTVShader} from "../../utils/badTVShader";
 import {applyPsychedelicShader} from "../../utils/psychedelicShader";
+import {applyMosaicShader} from "../../utils/mosaicShader";
 import {drawQuad} from "../../utils/webglUtils";
 import {initWebGL} from "../../utils/webGLInitializer";
 
@@ -13,13 +15,12 @@ export interface CameraCanvasProps {
   isNoSignalDetected?: boolean;
   onEffectChange?: (effect: number) => void;
   numEffects?: number;
-
   /** 追加: アスペクトの合わせ方。既定は 'contain'（黒帯OK、引き伸ばしなし） */
   fitMode?: "contain" | "cover";
 }
 
-/** 0..1で効果定義 */
-type EffectKind = "badTV" | "psychedelic" | "normal";
+/** 効果タイプ */
+type EffectKind = "badTV" | "psychedelic" | "mosaic" | "normal";
 interface EffectDefinition {
   type: EffectKind;
   badTVIntensity?: "subtle" | "moderate" | "heavy" | "extreme";
@@ -27,7 +28,7 @@ interface EffectDefinition {
   description?: string;
 }
 
-/** 固定のエフェクト定義（再生成を避けるためモジュールスコープに） */
+/** 固定のエフェクト定義（必要最小限） */
 const EFFECT_DEFINITIONS: Record<number, EffectDefinition> = {
   0: {type: "normal", description: "エフェクトなし - 通常表示"},
   1: {type: "badTV", badTVIntensity: "moderate", description: "Bad TV - 中"},
@@ -42,10 +43,12 @@ const EFFECT_DEFINITIONS: Record<number, EffectDefinition> = {
     psychedelicIntensity: "intense",
     description: "Psychedelic - 強",
   },
-  // 5,6,7 は一旦使用しない（mosaic後日）
+  5: {type: "mosaic", description: "Mosaic - 中"},
+  6: {type: "mosaic", description: "Mosaic - 強"},
+  // 7以降は必要に応じて追加
 };
 
-/** 3x3 行列（列優先でも行優先でも、drawQuad側と一致していればOK） */
+/** 3x3 行列（drawQuad 側の解釈と一致していればOK） */
 const IDENTITY3 = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 
 /** 2D アフィン（行列）ヘルパ：スケール＆平行移動のみ */
@@ -56,7 +59,7 @@ function makeScaleTranslate(sx: number, sy: number, tx = 0, ty = 0): number[] {
   return [sx, 0, tx, 0, sy, ty, 0, 0, 1];
 }
 
-/** fitMode に応じて、-1..+1 のフルスクリーンクワッドをスケール（contain=黒帯、cover=トリミング） */
+/** fitMode: contain=黒帯 / cover=トリミング（NDCフルスクリーンのスケール） */
 function computeQuadTransform(
   canvasW: number,
   canvasH: number,
@@ -68,40 +71,31 @@ function computeQuadTransform(
 
   const canvasAR = canvasW / canvasH;
   const videoAR = videoW / videoH;
-
-  // 基本は NDC のフルスクリーン（-1..+1）。ここにスケールを掛ける。
-  // contain: 短辺側に合わせる→スケール < 1 で黒帯
-  // cover:  長辺側に合わせる→スケール > 1 でトリミング
   let sx = 1.0;
   let sy = 1.0;
 
   if (fitMode === "contain") {
     if (canvasAR > videoAR) {
-      // キャンバスの方が横長→横を縮める
       sx = videoAR / canvasAR;
       sy = 1.0;
     } else {
-      // キャンバスの方が縦長→縦を縮める
       sx = 1.0;
       sy = canvasAR / videoAR;
     }
   } else {
     // cover
     if (canvasAR > videoAR) {
-      // キャンバスの方が横長→縦を拡大して横を満たす
       sx = 1.0;
       sy = canvasAR / videoAR;
     } else {
-      // キャンバスの方が縦長→横を拡大して縦を満たす
       sx = videoAR / canvasAR;
       sy = 1.0;
     }
   }
-
-  // 中心基準のスケール。平行移動は不要（0,0）
   return makeScaleTranslate(sx, sy, 0, 0);
 }
 
+/** 動画テクスチャ（1枚）を作成・更新 */
 function ensureVideoTexture(
   gl: WebGLRenderingContext,
   vid: HTMLVideoElement,
@@ -110,7 +104,7 @@ function ensureVideoTexture(
 ): WebGLTexture {
   const minF = opts?.minFilter ?? gl.LINEAR;
   const magF = opts?.magFilter ?? gl.LINEAR;
-  const flipY = opts?.flipY ?? false; // ← 反転しない（上下そのまま）
+  const flipY = opts?.flipY ?? false; // 上下反転はここではしない
 
   let tex = existing;
   if (!tex) {
@@ -128,6 +122,25 @@ function ensureVideoTexture(
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid);
   }
   return tex;
+}
+
+/** MIN/MAG のフィルタを切替（NEAREST/LINEAR） */
+function setTextureFilter(
+  gl: WebGLRenderingContext,
+  tex: WebGLTexture,
+  nearest: boolean
+) {
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(
+    gl.TEXTURE_2D,
+    gl.TEXTURE_MIN_FILTER,
+    nearest ? gl.NEAREST : gl.LINEAR
+  );
+  gl.texParameteri(
+    gl.TEXTURE_2D,
+    gl.TEXTURE_MAG_FILTER,
+    nearest ? gl.NEAREST : gl.LINEAR
+  );
 }
 
 /** DPRに合わせてキャンバスの実ピクセルを設定 */
@@ -160,16 +173,22 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   const baseProgramRef = useRef<WebGLProgram | null>(null);
   const badTVProgramRef = useRef<WebGLProgram | null>(null);
   const psychedelicProgramRef = useRef<WebGLProgram | null>(null);
+  const mosaicProgramRef = useRef<WebGLProgram | null>(null);
 
-  // テクスチャ1枚だけ再利用
+  // テクスチャ再利用
   const videoTexRef = useRef<WebGLTexture | null>(null);
+  const lastNearestRef = useRef<boolean>(false); // 直前のフィルタ状態（mosaic用）
 
-  // タップ時のワンショットエフェクトON/OFFのみ
+  // タップ時のワンショット
   const [isEffectOn, setIsEffectOn] = useState(false);
   const timersRef = useRef<number[]>([]);
   const rafRef = useRef<number>(0);
 
-  // currentのエフェクトをメモ化
+  // mosaic 用（発火タイム＆角度）
+  const mosaicEffectStartRef = useRef<number>(-1);
+  const mosaicAngleRef = useRef<number>(0);
+
+  // currentのエフェクト
   const effectDef = useMemo<EffectDefinition>(() => {
     return EFFECT_DEFINITIONS[current] || EFFECT_DEFINITIONS[0];
   }, [current]);
@@ -186,10 +205,11 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     baseProgramRef.current = result.programs.program;
     badTVProgramRef.current = result.programs.badTVProgram;
     psychedelicProgramRef.current = result.programs.psychedelicProgram;
+    mosaicProgramRef.current = result.programs.mosaicProgram; // ← 必須
     return true;
   };
 
-  // mount/ready時に初期化 & DPRリサイズ対応
+  // mount/ready時
   useEffect(() => {
     if (!ready) return;
 
@@ -205,13 +225,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
       sizeCanvasToDisplay(canvasRef.current, glRef.current);
     };
     window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-    };
+    return () => window.removeEventListener("resize", onResize);
   }, [ready]);
 
-  // 描画ループ：1フレーム=1回描画（パスは1つだけ）
+  // 描画ループ（1フレーム=1パス）
   useEffect(() => {
     if (!ready || !glRef.current) return;
 
@@ -226,19 +243,19 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           return;
         }
 
-        // DPR変化・CSSリサイズ監視
+        // DPR / リサイズ追従
         sizeCanvasToDisplay(canvas, gl);
 
-        // 背景クリア（contain 時の黒帯に使われる）
+        // 背景クリア（contain時の黒帯）
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        // 動画テクスチャを1枚だけ更新（上下反転はしない）
+        // 動画テクスチャを更新
         videoTexRef.current = ensureVideoTexture(gl, vid, videoTexRef.current, {
           flipY: false,
         });
 
-        // アスペクトに応じた頂点スケール行列を計算
+        // フィット行列（drawQuad に渡す）
         const transform = computeQuadTransform(
           canvas.width,
           canvas.height,
@@ -246,8 +263,10 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
           vid.videoHeight,
           fitMode
         );
+        const ndcScaleX = transform[0]; // makeScaleTranslate の定義と対応
+        const ndcScaleY = transform[4];
 
-        // そのフレームで使用するプログラムを決定（1回だけ描画）
+        // 使うプログラムを決める（1回だけ描画）
         let programToUse: WebGLProgram | null = baseProgramRef.current;
 
         if (isEffectOn) {
@@ -259,6 +278,11 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
               config: getBadTVConfigForEffect(current),
             });
             programToUse = badTVProgramRef.current;
+            // 非mosaic時はフィルタをLINEARに戻す（必要なら）
+            if (videoTexRef.current && lastNearestRef.current) {
+              setTextureFilter(gl, videoTexRef.current, false);
+              lastNearestRef.current = false;
+            }
           } else if (
             effectDef.type === "psychedelic" &&
             psychedelicProgramRef.current
@@ -270,16 +294,60 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
               config: getPsychedelicConfigForEffect(current),
             });
             programToUse = psychedelicProgramRef.current;
+            if (videoTexRef.current && lastNearestRef.current) {
+              setTextureFilter(gl, videoTexRef.current, false);
+              lastNearestRef.current = false;
+            }
+          } else if (effectDef.type === "mosaic" && mosaicProgramRef.current) {
+            const nowSec = t * 0.001;
+            const cfg = getMosaicConfigForEffect(current);
+
+            // 発火中かどうか
+            const active =
+              mosaicEffectStartRef.current >= 0 &&
+              nowSec - mosaicEffectStartRef.current < cfg.effectDuration;
+
+            // 発火中はNEAREST、終わればLINEAR（無駄切替を避ける）
+            if (videoTexRef.current) {
+              if (active && !lastNearestRef.current) {
+                setTextureFilter(gl, videoTexRef.current, true);
+                lastNearestRef.current = true;
+              } else if (!active && lastNearestRef.current) {
+                setTextureFilter(gl, videoTexRef.current, false);
+                lastNearestRef.current = false;
+              }
+            }
+
+            applyMosaicShader({
+              gl,
+              program: mosaicProgramRef.current,
+              time: nowSec,
+              effectStart: mosaicEffectStartRef.current,
+              shakeAngle: mosaicAngleRef.current,
+              viewWidth: canvas.width,
+              viewHeight: canvas.height,
+              texWidth: vid.videoWidth,
+              texHeight: vid.videoHeight,
+              ndcScaleX,
+              ndcScaleY,
+              config: cfg,
+            });
+            programToUse = mosaicProgramRef.current;
           }
-          // mosaicは後日。今は一切適用しない
+        } else {
+          // エフェクトOFF時はフィルタを標準（LINEAR）に戻す
+          if (videoTexRef.current && lastNearestRef.current) {
+            setTextureFilter(gl, videoTexRef.current, false);
+            lastNearestRef.current = false;
+          }
         }
 
-        // 1描画（transform を渡してレターボックス／トリミング）
+        // 1描画
         drawQuad(gl, programToUse!, transform, videoTexRef.current!);
 
         rafRef.current = requestAnimationFrame(draw);
       } catch (e) {
-        // 落ちないようにループ継続
+        // 落ちないように継続
         console.error(e);
         rafRef.current = requestAnimationFrame(draw);
       }
@@ -289,14 +357,22 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
     return () => cancelAnimationFrame(rafRef.current);
   }, [ready, videoRef, isEffectOn, effectDef, current, fitMode]);
 
-  // タップ（pointer）ハンドラ：ワンショット
+  // タップ（pointer）: ワンショット発火
   const handlePointerDown = () => {
     setIsEffectOn(true);
-    const id1 = window.setTimeout(() => setIsEffectOn(false), 500);
+
+    // mosaic の発火情報（他エフェクトの場合は無視される）
+    mosaicEffectStartRef.current = performance.now() / 1000;
+    mosaicAngleRef.current = Math.random() * Math.PI * 2;
+
+    // タイムアウトでOFF（mosaicはConfigの継続時間に同期）
+    const cfg = getMosaicConfigForEffect(current);
+    const ms = Math.max(50, Math.floor(cfg.effectDuration * 1000 + 30));
+    const id1 = window.setTimeout(() => setIsEffectOn(false), ms);
     timersRef.current.push(id1);
   };
 
-  // アンマウント時のクリーンアップ（タイマー/テクスチャ）
+  // クリーンアップ
   useEffect(() => {
     return () => {
       timersRef.current.forEach((id) => clearTimeout(id));
@@ -309,25 +385,19 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
   }, []);
 
   return (
-    <>
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          height: "100%", // 親が高さを持つ前提（FullCameraApp 側で 100vh 等）
-          overflow: "hidden",
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "block",
-          }}
-          onPointerDown={handlePointerDown}
-        />
-      </div>
-    </>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%", // 親が高さを持つ前提（例: 100vh）
+        overflow: "hidden",
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{width: "100%", height: "100%", display: "block"}}
+        onPointerDown={handlePointerDown}
+      />
+    </div>
   );
 };
