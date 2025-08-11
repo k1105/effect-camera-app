@@ -10,7 +10,7 @@ import {
   NewHamburgerMenu,
   type SignalLogEntry,
 } from "./components/NewHamburgerMenu";
-import type {LayoutMode} from "./components/HamburgerMenu";
+import type {LayoutMode} from "./components/NewHamburgerMenu";
 import {loadEffectsFromSpriteSheet} from "./utils/spriteSheetLoader";
 import {OnPerformance} from "./components/layout/OnPerformance";
 import {BeginPerformance} from "./components/layout/BeginPerformance";

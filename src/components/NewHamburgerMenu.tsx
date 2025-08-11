@@ -1,5 +1,11 @@
 import React, {useState} from "react";
 
+export type LayoutMode =
+  | "OnPerformance"
+  | "BeginPerformance"
+  | "NoSignal"
+  | "Countdown";
+
 export interface SignalLogEntry {
   timestamp: string;
   signal: string;
