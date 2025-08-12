@@ -1,0 +1,149 @@
+[
+  {
+    "index": 0,
+    "title_index": "toxic_invasion",
+    "title": "TOXiC iNVASiON",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 1,
+    "title_index": "black_nails",
+    "title": "Black Nails",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 2,
+    "title_index": "no_colors",
+    "title": "NO COLOR S",
+    "effect": {
+      "type": "badTV",
+      "badTVIntensity": "moderate"
+    }
+  },
+  {
+    "index": 3,
+    "title_index": "totsugeki",
+    "title": "TOTSUGEKI!!!!!",
+    "effect": {
+      "type": "psychedelic",
+      "psychedelicIntensity": "moderate"
+    }
+  },
+  {
+    "index": 4,
+    "title_index": "make_a_move",
+    "title": "MAKE A MOVE",
+    "effect": {
+      "type": "psychedelic",
+      "psychedelicIntensity": "intense"
+    }
+  },
+  {
+    "index": 5,
+    "title_index": "I_wont_let_you_go",
+    "title": "I won't let you go",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 6,
+    "title_index": "darma",
+    "title": "darma",
+    "effect": {
+      "type": "mosaic"
+    }
+  },
+  {
+    "index": 7,
+    "title_index": "ja_pa_nese_girl",
+    "title": "ジャ・パ・ニーズガール",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 8,
+    "title_index": "sexual_conversation",
+    "title": "SEXUAL CONVERSATiON",
+    "effect": {
+      "type": "typography"
+    }
+  },
+  {
+    "index": 9,
+    "title_index": "tokyo_sky_blues",
+    "title": "Tokyo Sky Blues",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 10,
+    "title_index": "please",
+    "title": "PLEASE!!!",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 11,
+    "title_index": "anyway",
+    "title": "Anyway",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 12,
+    "title_index": "I_hate_u",
+    "title": "I HATE U",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 13,
+    "title_index": "blueberry_gum",
+    "title": "Blueberry Gum",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 14,
+    "title_index": "heavens_seven",
+    "title": "Heaven's Seven",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 15,
+    "title_index": "get_new_mirai",
+    "title": "Get New ミライ",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 16,
+    "title_index": "too_young_to_get_it_too_fast_to_live",
+    "title": "Too young to get it, too fast to live",
+    "effect": {
+      "type": "normal"
+    }
+  },
+  {
+    "index": 17,
+    "title_index": "hyper_cracker",
+    "title": "Hyper Cracker",
+    "effect": {
+      "type": "normal"
+    }
+  }
+]

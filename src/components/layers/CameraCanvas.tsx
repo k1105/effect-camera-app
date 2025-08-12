@@ -7,6 +7,7 @@ import {applyPsychedelicShader} from "../../utils/psychedelicShader";
 import {applyMosaicShader} from "../../utils/mosaicShader";
 import {drawQuad} from "../../utils/webglUtils";
 import {initWebGL} from "../../utils/webGLInitializer";
+import indexInformation from "../../../public/index_information.json";
 
 /* ============================= Types & Config ============================= */
 
@@ -16,7 +17,6 @@ export interface CameraCanvasProps {
   ready: boolean;
   isNoSignalDetected?: boolean;
   onEffectChange?: (effect: number) => void;
-  numEffects?: number;
   fitMode?: "contain" | "cover"; // 既定: contain（黒帯OK）
 }
 
@@ -26,26 +26,18 @@ interface EffectDefinition {
   type: EffectKind;
   badTVIntensity?: "subtle" | "moderate" | "heavy" | "extreme";
   psychedelicIntensity?: "subtle" | "moderate" | "intense" | "extreme";
-  description?: string;
 }
 
-const EFFECT_DEFINITIONS: Record<number, EffectDefinition> = {
-  0: {type: "normal", description: "エフェクトなし - 通常表示"},
-  1: {type: "badTV", badTVIntensity: "moderate", description: "Bad TV - 中"},
-  2: {type: "badTV", badTVIntensity: "heavy", description: "Bad TV - 強"},
-  3: {
-    type: "psychedelic",
-    psychedelicIntensity: "moderate",
-    description: "Psychedelic - 中",
-  },
-  4: {
-    type: "psychedelic",
-    psychedelicIntensity: "intense",
-    description: "Psychedelic - 強",
-  },
-  5: {type: "mosaic", description: "Mosaic - 中"},
-  6: {type: "mosaic", description: "Mosaic - 強"},
-  8: {type: "typography", description: "Typography - ASPオーバーレイ"}, // ← 追加
+// index_information.jsonからエフェクト定義を動的に取得する関数
+const getEffectDefinition = (songId: number): EffectDefinition => {
+  const songInfo = indexInformation.find((item) => item.index === songId);
+  console.log(songInfo);
+  console.log(songInfo?.effect);
+  if (!songInfo || !songInfo.effect) {
+    return {type: "normal"};
+  }
+
+  return songInfo.effect as EffectDefinition;
 };
 
 /* ============================= Math helpers ============================= */
@@ -232,7 +224,7 @@ export const CameraCanvas: React.FC<CameraCanvasProps> = ({
 
   // Effect def
   const effectDef = useMemo<EffectDefinition>(() => {
-    return EFFECT_DEFINITIONS[current] || EFFECT_DEFINITIONS[0];
+    return getEffectDefinition(current);
   }, [current]);
 
   // WebGL init

@@ -1,50 +1,98 @@
 import {useEffect, useState} from "react";
-import sexualConversation from "/txt/tour-title.txt?raw";
+import indexInformation from "../../public/index_information.json";
 
 export interface SongTitleOverlayProps {
   songId: number;
 }
 
-const NUM_SONGS = 18;
-
-const songTitleMap = new Map();
-
-songTitleMap.set(-1, "");
-songTitleMap.set(0, "toxic_invasion");
-
-songTitleMap.set(1, "black_nails");
-songTitleMap.set(2, "no_colors");
-songTitleMap.set(3, "totsugeki");
-songTitleMap.set(4, "make_a_move");
-songTitleMap.set(5, "I-wont-let-you-go");
-
-songTitleMap.set(6, "darma");
-songTitleMap.set(7, "");
-songTitleMap.set(8, "sexual_conversation");
-songTitleMap.set(9, "tokyo_sky_blues");
-songTitleMap.set(10, "please");
-
-songTitleMap.set(11, "anyway");
-songTitleMap.set(12, "I-hate-u");
-songTitleMap.set(13, "blueberry_gum");
-songTitleMap.set(14, "heavens_seven");
-songTitleMap.set(15, "");
-
-songTitleMap.set(16, "too_young_to_get_it_too_fast_to_live");
-songTitleMap.set(17, "gtoer_cracker");
+// index_information.jsonから曲名を取得する関数
+const getSongTitle = (songId: number): string => {
+  const songInfo = indexInformation.find((item) => item.index === songId);
+  return songInfo ? songInfo.title_index : "";
+};
 
 // アニメーション用の文字セット
 const GLITCH_CHARS = ["A", "S", "P"];
 
+// テキストファイルを動的に読み込む関数
+const loadTextFile = async (songTitle: string): Promise<string> => {
+  try {
+    // 曲名に対応するテキストファイルを読み込み
+    const filePath = `/txt/${songTitle}.txt`;
+    const response = await fetch(filePath);
+
+    if (response.ok) {
+      const text = await response.text();
+
+      // Content-Typeをチェックして、HTMLが返された場合はフォールバック処理に移行
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("text/html")) {
+        throw new Error("HTML content returned instead of text file");
+      }
+
+      // ファイルサイズもチェック（HTMLエラーページは通常大きい）
+      if (text.length > 1000) {
+        // HTMLタグが含まれているかチェック
+        if (
+          text.includes("<html") ||
+          text.includes("<body") ||
+          text.includes("<!DOCTYPE")
+        ) {
+          throw new Error("HTML content detected, treating as missing file");
+        }
+      }
+
+      return text;
+    } else {
+      console.log(
+        `File ${songTitle}.txt not found (status: ${response.status})`
+      );
+    }
+  } catch (error) {
+    console.warn(`Failed to load text file for ${songTitle}:`, error);
+  }
+
+  try {
+    const fallbackResponse = await fetch("/txt/tour_title.txt");
+
+    if (fallbackResponse.ok) {
+      const fallbackText = await fallbackResponse.text();
+      // フォールバックファイルもHTMLが返された場合は最終フォールバックを使用
+      const fallbackContentType = fallbackResponse.headers.get("content-type");
+      if (fallbackContentType && fallbackContentType.includes("text/html")) {
+        return "Tour Title"; // 最終的なフォールバック
+      }
+
+      return fallbackText;
+    }
+  } catch (error) {
+    console.error("Failed to load fallback tour_title.txt:", error);
+    return "Tour Title"; // 最終的なフォールバック
+  }
+
+  return "Tour Title";
+};
+
 export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({songId}) => {
   const [showImage, setShowImage] = useState(false);
-  const [glitchText, setGlitchText] = useState(sexualConversation);
+  const [glitchText, setGlitchText] = useState("");
   const [animationPhase, setAnimationPhase] = useState(0); // 0: flickering, 1: stable, 2: fade
   const [flickerOpacity, setFlickerOpacity] = useState(1);
   const [glitchIntensity, setGlitchIntensity] = useState(1); // グリッチの強度（1.0 → 0.0）
 
-  const isOutOfBound =
-    songId < 0 || songId >= NUM_SONGS || songTitleMap.get(songId) === "";
+  // 曲名が取得できない場合は境界外とみなす
+  const isOutOfBound = getSongTitle(songId) === "";
+
+  // 曲名が変更されたときにテキストファイルを読み込む
+  useEffect(() => {
+    if (!isOutOfBound) {
+      const songTitle = getSongTitle(songId);
+
+      loadTextFile(songTitle).then((text) => {
+        setGlitchText(text);
+      });
+    }
+  }, [songId, isOutOfBound]);
 
   useEffect(() => {
     const cycle = () => {
@@ -52,7 +100,7 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({songId}) => {
       setAnimationPhase(0);
       setFlickerOpacity(1);
       setGlitchIntensity(1);
-      setGlitchText(sexualConversation); // 初期化時にリセット
+      // 初期化時にテキストをリセット（loadTextFileで更新される）
       // フェーズ1: 3秒でフリッキングしながら徐々に安定
       const flickerInterval = setInterval(() => {
         setFlickerOpacity(() => {
@@ -100,7 +148,7 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({songId}) => {
     if (animationPhase === 0 && glitchIntensity > 0) {
       const glitchInterval = setInterval(() => {
         // 毎回初期状態から開始（前回の変更をリセット）
-        let newText = sexualConversation;
+        let newText = glitchText;
         const maxGlitchCount = Math.floor(30 * glitchIntensity); // 強度に応じて減少（20 → 30に増加）
         const glitchCount = Math.floor(Math.random() * maxGlitchCount) + 1;
 
@@ -157,7 +205,7 @@ export const SongTitleOverlay: React.FC<SongTitleOverlayProps> = ({songId}) => {
 
       return () => clearInterval(glitchInterval);
     }
-  }, [animationPhase, glitchIntensity]);
+  }, [animationPhase, glitchIntensity, glitchText]);
 
   if (!showImage || isOutOfBound) {
     return null;

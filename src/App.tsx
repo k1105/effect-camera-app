@@ -368,7 +368,6 @@ function FullCameraApp() {
               ready={ready}
               isNoSignalDetected={isNoSignalDetected}
               onEffectChange={handleEffectChange}
-              numEffects={NUM_EFFECTS}
             />
 
             {layout === "OnPerformance" && <OnPerformance current={current} />}

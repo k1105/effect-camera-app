@@ -1,5 +1,5 @@
 import {useState, useEffect} from "react";
-import tourTitle from "/txt/tour-title.txt?raw";
+import tourTitle from "/txt/tour_title.txt?raw";
 
 export const Countdown = ({startTime}: {startTime: number}) => {
   const [countdown, setCountdown] = useState(startTime - Date.now());
